@@ -28,7 +28,11 @@ import com.example.servyapp.ui.utils.AppLoading
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,9 +51,11 @@ fun HomeScreen(
             TopAppBar(title = { Text("Restaurantes") })
         }
     ) { innerPadding ->
-        Box(modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
             when {
                 state.isLoading -> {
                     AppLoading(modifier = Modifier.padding(16.dp))
@@ -82,12 +88,38 @@ fun HomeScreen(
 fun RestaurantItem(restaurant: Restaurant) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = restaurant.name, style = MaterialTheme.typography.titleMedium)
-            Text(text = restaurant.address, style = MaterialTheme.typography.bodyMedium)
-            Text(text = restaurant.phone, style = MaterialTheme.typography.bodySmall)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        ) {
+            AsyncImage(
+                model = restaurant.imageURL,
+                contentDescription = restaurant.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
