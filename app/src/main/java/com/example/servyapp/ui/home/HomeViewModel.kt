@@ -3,6 +3,7 @@ package com.example.servyapp.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servyapp.data.repository.RestaurantRepository
+import com.example.servyapp.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: RestaurantRepository
+    private val restaurantRepository: RestaurantRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeState())
@@ -27,11 +29,22 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
-                val restaurants = repository.getAllRestaurants()
+                val restaurants = restaurantRepository.getAllRestaurants()
                 _uiState.update { it.copy(isLoading = false, restaurants = restaurants) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
+    }
+
+    fun saveSelectedRestaurant(restaurantId: String) {
+        viewModelScope.launch {
+            userRepository.saveSelectedRestaurantId(restaurantId)
+            _uiState.update { it.copy(navigateToPlates = true) }
+        }
+    }
+
+    fun navigationToPlatesComplete() { //para que se pueda volver usando el boton de atras del sistema
+        _uiState.update { it.copy(navigateToPlates = false) }
     }
 }

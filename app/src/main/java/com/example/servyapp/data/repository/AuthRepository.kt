@@ -7,8 +7,7 @@ import com.google.firebase.auth.FirebaseUser
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor( //para iniciar sesion, crear cuenta, cambiar contraseña y desloguearse
-    private val authRemoteDataSource: AuthRemoteDataSource,
-    private val userRemoteDataSource: UserRemoteDataSource
+    private val authRemoteDataSource: AuthRemoteDataSource
 ) {
 
     val currentUser: FirebaseUser? get() = authRemoteDataSource.currentUser

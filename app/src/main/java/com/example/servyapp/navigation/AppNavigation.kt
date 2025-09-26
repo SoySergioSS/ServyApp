@@ -1,28 +1,36 @@
 package com.example.servyapp.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.servyapp.ui.Plates.PlatesScreen
 import com.example.servyapp.ui.home.HomeScreen
+import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
+import com.example.servyapp.ui.profile.ProfileScreen
+import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
 import com.example.servyapp.ui.signup.SignupScreen
 import com.example.servyapp.ui.signup.SignupViewModel
+import com.example.servyapp.ui.splash.SplashScreen
 import com.example.servyapp.ui.start.StartScreen
 
 sealed class Screen(val route: String){
+    object Splash: Screen("splash")
     object Start: Screen("start")
     object Signup: Screen("signup")
     object Login: Screen("login")
     object Home: Screen("home")
     object Card: Screen("card")
+    object Plates: Screen("plates")
+    object Profile: Screen("profile")
 }
 
 @Composable
@@ -34,9 +42,29 @@ fun AppNavigation(
 
     NavHost(
         navController = navHostController,
-        startDestination = Screen.Start.route,
+        startDestination = Screen.Splash.route,
         modifier = modifier
     ){
+        composable(route = Screen.Splash.route){
+            SplashScreen(
+                navigateToHome = {
+                    navHostController.navigate(Screen.Home.route){
+                        popUpTo(0){
+                            inclusive = true
+                        }
+                    }
+                },
+                navigateToStart = {
+                    navHostController.navigate(Screen.Start.route){
+                        popUpTo(0){
+                            inclusive = true
+                        }
+                    }
+                },
+                splashViewModel = hiltViewModel()
+            )
+        }
+
         composable(route = Screen.Start.route){
             StartScreen(
                 loginButtonPressed = {
@@ -87,7 +115,21 @@ fun AppNavigation(
         }
 
         composable(route = Screen.Home.route){
-            HomeScreen()
+            val homeViewModel: HomeViewModel = hiltViewModel()
+            val state by homeViewModel.uiState.collectAsState()
+            LaunchedEffect(state.navigateToPlates) {
+                if(state.navigateToPlates){
+                    navHostController.navigate(Screen.Plates.route)
+                    homeViewModel.navigationToPlatesComplete()
+                }
+            }
+
+            HomeScreen(
+                homeViewModel = hiltViewModel(),
+                onProfileClick = {
+                    navHostController.navigate(Screen.Profile.route)
+                }
+            )
         }
 
         composable(route = Screen.Card.route){
@@ -95,6 +137,26 @@ fun AppNavigation(
                 signupViewModel = signupViewModel,
                 onNavigateBack = {
                     navHostController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.Plates.route){
+            PlatesScreen(
+                platesViewModel = hiltViewModel()
+            )
+        }
+
+        composable(route = Screen.Profile.route){
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            ProfileScreen(
+                viewModel = profileViewModel,
+                logoutButtonPressed = {
+                    navHostController.navigate(Screen.Start.route){
+                        popUpTo(0){
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
