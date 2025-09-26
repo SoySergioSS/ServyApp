@@ -80,9 +80,6 @@ fun AppNavigation(
             }
             LoginScreen(
                 loginViewModel = loginViewModel,
-                forgotPasswordButtonPressed = {
-                /*TODO*/
-                },
                 signupButtonPressed = {
                     navHostController.navigate(Screen.Signup.route)
                 }

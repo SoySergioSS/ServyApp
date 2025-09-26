@@ -16,7 +16,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun LoginScreen(
     loginViewModel: LoginViewModel,
-    forgotPasswordButtonPressed: () -> Unit,
     signupButtonPressed: () -> Unit
 ) {
     val state by loginViewModel.uiState.collectAsState()
@@ -52,10 +51,37 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
-            onClick = forgotPasswordButtonPressed,
+            onClick = { loginViewModel.toggleForgotDialog(true) },
             modifier = Modifier.align(Alignment.End)
         ) {
             Text(text = "¿Olvidaste tu contraseña?")
+        }
+
+        if (state.showForgotDialog) {
+            AlertDialog(
+                onDismissRequest = { loginViewModel.toggleForgotDialog(false) },
+                title = { Text("Restablecer contraseña") },
+                text = {
+                    OutlinedTextField(
+                        value = state.forgotEmail,
+                        onValueChange = { loginViewModel.updateForgotEmail(it) },
+                        label = { Text("Correo") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { loginViewModel.forgotPassword() }) {
+                        Text("Enviar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { loginViewModel.toggleForgotDialog(false) }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
 
         LoginFooter(onSignupClicked = signupButtonPressed)
@@ -76,10 +102,6 @@ private fun LoginHeader() {
         )
     }
 }
-
-//---
-
-// Componente para el formulario de inicio de sesión
 @Composable
 private fun LoginForm(
     email: String,
@@ -139,7 +161,6 @@ private fun LoginFooter(
 fun LoginScreenPreview() {
     LoginScreen(
         loginViewModel = viewModel(),
-        forgotPasswordButtonPressed = {},
         signupButtonPressed = {}
     )
 }

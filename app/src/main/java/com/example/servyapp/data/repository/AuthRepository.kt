@@ -25,4 +25,8 @@ class AuthRepository @Inject constructor( //para iniciar sesion, crear cuenta, c
         authRemoteDataSource.logOut()
     }
 
+    suspend fun sendPasswordReset(email: String) {
+        authRemoteDataSource.sendPasswordReset(email)
+    }
+
 }

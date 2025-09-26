@@ -25,28 +25,39 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(password = newPassword) }
     }
 
-    fun mostrarEsconderPassword(){
+    fun mostrarEsconderPassword() {
         val valorActual = _uiState.value.mostrarPassword
         _uiState.update { it.copy(mostrarPassword = !valorActual) }
     }
 
-    fun updateErrorMessage(newMessage: String){
+    fun updateErrorMessage(newMessage: String) {
         _uiState.update { it.copy(errorMessage = newMessage) }
     }
 
-    fun mostrarMensajeError(){
+    fun mostrarMensajeError() {
         val valorActual = _uiState.value.mostrarMensajeError
         _uiState.update { it.copy(mostrarMensajeError = !valorActual) }
     }
 
-    fun loginButtonPressed(){
-        if(
+    fun toggleForgotDialog(show: Boolean) {
+        if (!show) {
+            _uiState.update { it.copy(forgotEmail = "") }
+        }
+        _uiState.update { it.copy(showForgotDialog = show) }
+    }
+
+    fun updateForgotEmail(newEmail: String) {
+        _uiState.update { it.copy(forgotEmail = newEmail) }
+    }
+
+    fun loginButtonPressed() {
+        if (
             _uiState.value.email.isEmpty() ||
             _uiState.value.password.isEmpty()
-        ){
+        ) {
             _uiState.update { it.copy(mostrarMensajeError = true) }
             _uiState.update { it.copy(errorMessage = "Por favor, complete todos los campos") }
-        }else{
+        } else {
             viewModelScope.launch {
                 try {
                     authRepository.logIn(uiState.value.email, uiState.value.password)
@@ -56,6 +67,49 @@ class LoginViewModel @Inject constructor(
                     _uiState.update { it.copy(errorMessage = "Error al iniciar sesion: ${e.message.toString()}") }
                 }
             }
+        }
+    }
+
+    fun forgotPassword() {
+        viewModelScope.launch {
+            try {
+                if (_uiState.value.forgotEmail.isNotEmpty()) {
+                    authRepository.sendPasswordReset(_uiState.value.forgotEmail)
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Si el correo está registrado, recibirás un enlace para restablecer la contraseña",
+                            showForgotDialog = false
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Por favor, ingrese un correo",
+                            mostrarMensajeError = true
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Error: ${e.message}",
+                        mostrarMensajeError = true
+                    )
+                }
+            }
+            finally {
+                _uiState.update { it.copy(forgotEmail = "") }
+            }
+        }
+    }
+
+    fun clearMessages() {
+        _uiState.update {
+            it.copy(
+                errorMessage = "",
+                successMessage = "",
+                mostrarMensajeError = false
+            )
         }
     }
 }

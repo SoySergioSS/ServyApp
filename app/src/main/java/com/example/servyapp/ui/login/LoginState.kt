@@ -6,5 +6,11 @@ data class LoginState(
     val mostrarPassword: Boolean = false,
     val errorMessage: String = "",
     val mostrarMensajeError: Boolean = false,
-    val navigateToHome: Boolean = false
+    val navigateToHome: Boolean = false,
+
+    //para forgot password
+    val showForgotDialog: Boolean = false,
+    val forgotEmail: String = "",
+
+    val successMessage: String = ""
 )
