@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
+import com.example.servyapp.ui.signup.CardRegistrationScreen
 import com.example.servyapp.ui.signup.SignupScreen
 import com.example.servyapp.ui.signup.SignupViewModel
 import com.example.servyapp.ui.start.StartScreen
@@ -21,6 +22,7 @@ sealed class Screen(val route: String){
     object Signup: Screen("signup")
     object Login: Screen("login")
     object Home: Screen("home")
+    object Card: Screen("card")
 }
 
 @Composable
@@ -28,6 +30,8 @@ fun AppNavigation(
     navHostController: NavHostController,
     modifier: Modifier = Modifier
 ){
+    val signupViewModel: SignupViewModel = hiltViewModel()
+
     NavHost(
         navController = navHostController,
         startDestination = Screen.Start.route,
@@ -45,7 +49,6 @@ fun AppNavigation(
         }
 
         composable(route = Screen.Signup.route){
-            val signupViewModel: SignupViewModel = hiltViewModel()
             val state by signupViewModel.uiState.collectAsState()
             if(state.navigateToHome){
                 navHostController.navigate(Screen.Home.route){
@@ -57,7 +60,7 @@ fun AppNavigation(
             SignupScreen(
                 signupViewModel = signupViewModel,
                 addCardButtonPressed = {
-                    /*TODO*/
+                    navHostController.navigate(Screen.Card.route)
                 },
                 loginButtonPressed = {
                     navHostController.navigate(Screen.Login.route)
@@ -88,6 +91,15 @@ fun AppNavigation(
 
         composable(route = Screen.Home.route){
             HomeScreen()
+        }
+
+        composable(route = Screen.Card.route){
+            CardRegistrationScreen(
+                signupViewModel = signupViewModel,
+                onNavigateBack = {
+                    navHostController.popBackStack()
+                }
+            )
         }
     }
 }

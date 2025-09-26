@@ -1,26 +1,20 @@
 package com.example.servyapp.data.repository
 
 import com.example.servyapp.data.datasource.AuthRemoteDataSource
+import com.example.servyapp.data.datasource.CardRemoteDataSource
 import com.example.servyapp.data.datasource.UserRemoteDataSource
+import com.example.servyapp.domain.model.Card
 import javax.inject.Inject
 
-class CardRepository @Inject constructor( //para agregar, actualizar o eliminar tarjetas
-    //private val authRemoteDataSource: AuthRemoteDataSource,
-    //private val userRemoteDataSource: UserRemoteDataSource
+class CardRepository @Inject constructor(
+    private val cardRemoteDataSource: CardRemoteDataSource
 ) {
+    suspend fun createCard(card: Card) =
+        cardRemoteDataSource.createCard(card)
 
-//    private val tarjetasRef = db.getReference("tarjetas")
-//
-//    suspend fun addOrUpdateCard(uid: String, card: CreditCard) {
-//        tarjetasRef.child(uid).setValue(card).await()
-//    }
-//
-//    suspend fun getCard(uid: String): CreditCard? {
-//        val snapshot = tarjetasRef.child(uid).get().await()
-//        return snapshot.getValue(CreditCard::class.java)
-//    }
-//
-//    suspend fun deleteCard(uid: String) {
-//        tarjetasRef.child(uid).removeValue().await()
-//    }
+    suspend fun getCard(cardId: String): Card? =
+        cardRemoteDataSource.getCard(cardId)
+
+    suspend fun deleteCard(cardId: String) =
+        cardRemoteDataSource.deleteCard(cardId)
 }
