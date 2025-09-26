@@ -25,7 +25,7 @@ class SignupUseCase @Inject constructor(
             authRepository.signUp(email, password)
             val uid = authRepository.currentUser?.uid ?: throw Exception("No se pudo obtener UID")
 
-            val user = User(uid, phone, email)
+            val user = User(uid, email, phone)
             userRepository.createUserProfile(user)
 
             if (cardNumber.isNotEmpty() && cardHolderName.isNotEmpty() && expirationDate.isNotEmpty() && cvv.isNotEmpty())
