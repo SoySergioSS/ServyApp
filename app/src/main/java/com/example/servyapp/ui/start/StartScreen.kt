@@ -39,11 +39,11 @@ fun StartScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background), //Cambiar por el logo
+            painter = painterResource(id = R.drawable.logorobot_servyapp), //Cambiar por el logo
             contentDescription = stringResource(R.string.servyapp_logo),
             modifier = Modifier
-                .size(150.dp)
-                .padding(bottom = 32.dp)
+                .size(200.dp)
+                .padding(bottom = 20.dp)
         )
 
         Text(
