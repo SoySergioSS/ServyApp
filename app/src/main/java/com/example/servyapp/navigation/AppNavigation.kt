@@ -215,7 +215,7 @@ fun AppNavigation(
                 onBackClick = {
                     navHostController.popBackStack()
                 },
-                onNavigateToCheckout = {
+                onNavigateToOrders = {
                     //navHostController.navigate(Screen.Checkout.route)
                 },
                 onNavigateToDishDetail = { restaurantId, dishId ->

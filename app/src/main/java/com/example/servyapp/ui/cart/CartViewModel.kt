@@ -2,8 +2,16 @@ package com.example.servyapp.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.servyapp.data.repository.CartRepository
+import com.example.servyapp.data.manager.CartManager
+import com.example.servyapp.data.repository.PedidoRepository
 import com.example.servyapp.domain.model.CartItem
+import com.example.servyapp.domain.model.Order
+import com.example.servyapp.domain.model.OrderStatus
+import com.example.servyapp.domain.model.Pedido
+import com.example.servyapp.domain.model.PedidoItem
+import com.example.servyapp.domain.model.PedidoStatus
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +22,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CartViewModel @Inject constructor(
-    private val cartRepository: CartRepository
+    private val cartManager: CartManager,
+    private val pedidoRepository: PedidoRepository,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CartState())
@@ -26,18 +36,18 @@ class CartViewModel @Inject constructor(
 
     private fun loadCartItems() {
         viewModelScope.launch {
-            cartRepository.cartItems.collectLatest { items ->
+            cartManager.cartItems.collectLatest { items ->
                 _uiState.update { it.copy(items = items) }
             }
         }
     }
 
     fun incrementQuantity(cartItemId: String) {
-        cartRepository.incrementQuantity(cartItemId)
+        cartManager.incrementQuantity(cartItemId)
     }
 
     fun decrementQuantity(cartItemId: String) {
-        cartRepository.decrementQuantity(cartItemId)
+        cartManager.decrementQuantity(cartItemId)
     }
 
     fun showDeleteDialog(item: CartItem) {
@@ -51,13 +61,13 @@ class CartViewModel @Inject constructor(
     fun confirmDeleteItem() {
         val item = _uiState.value.showDeleteDialog
         if (item != null) {
-            cartRepository.removeFromCart(item.id)
+            cartManager.removeFromCart(item.id)
             dismissDeleteDialog()
         }
     }
 
     fun clearCart() {
-        cartRepository.clearCart()
+        cartManager.clearCart()
     }
 
     fun onItemClick(item: CartItem) {
@@ -71,10 +81,109 @@ class CartViewModel @Inject constructor(
         }
     }
 
-    fun onCheckoutClick() {
+    fun onPedidoClick() {
         if (_uiState.value.items.isNotEmpty()) {
-            _uiState.update { it.copy(navigationEvent = NavigationEvent.NavigateToCheckout) }
+            createOrder()
         }
+    }
+
+    private fun createOrder() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
+            try {
+                val currentUser = auth.currentUser
+                if (currentUser == null) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Usuario no autenticado",
+                            isLoading = false
+                        )
+                    }
+                    return@launch
+                }
+
+                val cartItems = _uiState.value.items
+                if (cartItems.isEmpty()) return@launch
+
+                //más adelante arreglar que solo se pida de un restaurante
+                val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
+
+                val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
+                    val pedidoItems = items.map { cartItem ->
+                        PedidoItem(
+                            dishId = cartItem.dish.id,
+                            dishName = cartItem.dish.name,
+                            dishImageURL = cartItem.dish.imageURL,
+                            dishDescription = cartItem.dish.description,
+                            quantity = cartItem.quantity,
+                            pricePerUnit = cartItem.dish.price,
+                            totalPrice = cartItem.totalPrice
+                        )
+                    }
+
+                    val subtotal = pedidoItems.sumOf { it.totalPrice }
+
+                    // TODO: Obtener el nombre real del restaurante
+                    val restaurantName = "Restaurante $restaurantId"
+
+                    Pedido(
+                        restaurantId = restaurantId,
+                        restaurantName = restaurantName,
+                        items = pedidoItems,
+                        subtotal = subtotal,
+                        createdAt = Timestamp.now(),
+                        status = PedidoStatus.PENDING
+                    )
+                }
+
+                val totalAmount = pedidos.sumOf { it.subtotal }
+                val orderNumber = generateOrderNumber()
+
+                val order = Order(
+                    userId = currentUser.uid,
+                    createdAt = Timestamp.now(),
+                    orderNumber = orderNumber,
+                    pedidos = pedidos,
+                    totalAmount = totalAmount,
+                    status = OrderStatus.PENDING
+                )
+
+                pedidoRepository.createOrder(order).fold(
+                    onSuccess = {
+                        cartManager.clearCart()
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                navigationEvent = NavigationEvent.NavigateToOrders
+                            )
+                        }
+                    },
+                    onFailure = { exception ->
+                        _uiState.update {
+                            it.copy(
+                                errorMessage = "Error al crear la orden: ${exception.message}",
+                                isLoading = false
+                            )
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Error inesperado: ${e.message}",
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+
+    private fun generateOrderNumber(): String {
+        val timestamp = System.currentTimeMillis()
+        val random = (1000..9999).random()
+        return "ORD-$timestamp-$random"
     }
 
     fun onNavigationEventHandled() {

@@ -29,8 +29,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,16 +59,15 @@ import com.example.servyapp.domain.model.CartItem
 fun CartScreen(
     viewModel: CartViewModel,
     onBackClick: () -> Unit,
-    onNavigateToCheckout: () -> Unit,
+    onNavigateToOrders: () -> Unit,
     onNavigateToDishDetail: (restaurantId: String, dishId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Manejar eventos de navegación
     LaunchedEffect(state.navigationEvent) {
         when (val event = state.navigationEvent) {
-            is NavigationEvent.NavigateToCheckout -> {
-                onNavigateToCheckout()
+            is NavigationEvent.NavigateToOrders -> {
+                onNavigateToOrders()
                 viewModel.onNavigationEventHandled()
             }
             is NavigationEvent.NavigateToDishDetail -> {
@@ -78,7 +78,6 @@ fun CartScreen(
         }
     }
 
-    // Diálogo de confirmación para eliminar
     if (state.showDeleteDialog != null) {
         DeleteConfirmationDialog(
             itemName = state.showDeleteDialog!!.dish.name,
@@ -115,7 +114,7 @@ fun CartScreen(
                 onDecrementQuantity = { viewModel.decrementQuantity(it) },
                 onDeleteItem = { viewModel.showDeleteDialog(it) },
                 onItemClick = { viewModel.onItemClick(it) },
-                onCheckoutClick = { viewModel.onCheckoutClick() },
+                onPedidoClick = { viewModel.onPedidoClick() },
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -162,13 +161,12 @@ fun CartContent(
     onDecrementQuantity: (String) -> Unit,
     onDeleteItem: (CartItem) -> Unit,
     onItemClick: (CartItem) -> Unit,
-    onCheckoutClick: () -> Unit,
+    onPedidoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // Lista de items
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -188,10 +186,9 @@ fun CartContent(
             }
         }
 
-        // Resumen del pedido
         OrderSummaryCard(
             state = state,
-            onCheckoutClick = onCheckoutClick
+            onPedidoClick = onPedidoClick
         )
     }
 }
@@ -217,7 +214,6 @@ fun CartItemCard(
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Imagen del platillo
             AsyncImage(
                 model = item.dish.imageURL,
                 contentDescription = item.dish.name,
@@ -227,14 +223,12 @@ fun CartItemCard(
                 contentScale = ContentScale.Crop
             )
 
-            // Información del platillo
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .height(100.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Nombre y botón eliminar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -262,20 +256,17 @@ fun CartItemCard(
                     }
                 }
 
-                // Precio unitario
                 Text(
                     text = "$${String.format("%.2f", item.dish.price)} c/u",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Controles de cantidad y precio total
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Controles de cantidad
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -320,7 +311,6 @@ fun CartItemCard(
                         }
                     }
 
-                    // Precio total del item
                     Text(
                         text = "$${String.format("%.2f", item.totalPrice)}",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -337,7 +327,7 @@ fun CartItemCard(
 @Composable
 fun OrderSummaryCard(
     state: CartState,
-    onCheckoutClick: () -> Unit
+    onPedidoClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -358,9 +348,8 @@ fun OrderSummaryCard(
                 )
             )
 
-            Divider()
+            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
-            // Número de items
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -375,9 +364,8 @@ fun OrderSummaryCard(
                 )
             }
 
-            Divider()
+            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
-            // Total
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -400,9 +388,8 @@ fun OrderSummaryCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Botón de checkout
             Button(
-                onClick = onCheckoutClick,
+                onClick = onPedidoClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -412,7 +399,7 @@ fun OrderSummaryCard(
                 )
             ) {
                 Text(
-                    text = "Proceder al Pago",
+                    text = "Generar pedido",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     )

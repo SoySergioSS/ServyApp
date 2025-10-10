@@ -3,7 +3,7 @@ package com.example.servyapp.ui.platedetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.servyapp.data.repository.CartRepository
+import com.example.servyapp.data.manager.CartManager
 import com.example.servyapp.data.repository.DishRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import javax.inject.Inject
 class PlateDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val dishRepository: DishRepository,
-    private val cartRepository: CartRepository
+    private val cartManager: CartManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlateDetailState())
@@ -86,7 +86,7 @@ class PlateDetailViewModel @Inject constructor(
         val restId = restaurantId ?: return
 
         // Agregar al carrito usando el repository
-        cartRepository.addToCart(dish, quantity, restId)
+        cartManager.addToCart(dish, quantity, restId)
 
         _uiState.update { it.copy(addedToCart = true) }
 

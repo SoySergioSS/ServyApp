@@ -1,4 +1,4 @@
-package com.example.servyapp.data.datasource
+package com.example.servyapp.data.manager
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
