@@ -11,6 +11,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.servyapp.ui.cart.CartScreen
+import com.example.servyapp.ui.cart.CartViewModel
 import com.example.servyapp.ui.plates.PlatesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
@@ -40,6 +42,7 @@ sealed class Screen(val route: String){
             return "plateDetail/$restaurantId/$dishId"
         }
     }
+    object Cart: Screen("cart")
 }
 
 @Composable
@@ -157,7 +160,7 @@ fun AppNavigation(
                     navHostController.popBackStack()
                 },
                 onCartClick = {
-                    //navHostController.navigate(Screen.Cart.route)
+                    navHostController.navigate(Screen.Cart.route)
                 },
                 onNavigateToDetail = { restaurantId, dishId ->
                     navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
@@ -200,7 +203,23 @@ fun AppNavigation(
                     navHostController.popBackStack()
                 },
                 onCartClick = {
-                    //navHostController.navigate(Screen.Cart.route) no sé si se usará
+                    navHostController.navigate(Screen.Cart.route)
+                }
+            )
+        }
+
+        composable(route = Screen.Cart.route){
+            val cartViewModel: CartViewModel = hiltViewModel()
+            CartScreen(
+                viewModel = cartViewModel,
+                onBackClick = {
+                    navHostController.popBackStack()
+                },
+                onNavigateToCheckout = {
+                    //navHostController.navigate(Screen.Checkout.route)
+                },
+                onNavigateToDishDetail = { restaurantId, dishId ->
+                    navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
                 }
             )
         }

@@ -7,5 +7,7 @@ data class PlateDetailState(
     val quantity: Int = 1,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val addedToCart: Boolean = false
+    val addedToCart: Boolean = false,
+
+    val navigateToCart: Boolean = false
 )

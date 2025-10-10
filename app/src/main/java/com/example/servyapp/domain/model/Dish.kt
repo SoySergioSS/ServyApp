@@ -1,5 +1,7 @@
 package com.example.servyapp.domain.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class Dish(
     val id: String = "",
     val name: String = "",

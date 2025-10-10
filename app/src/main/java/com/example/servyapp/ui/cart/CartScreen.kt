@@ -1,0 +1,468 @@
+package com.example.servyapp.ui.cart
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.servyapp.domain.model.CartItem
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CartScreen(
+    viewModel: CartViewModel,
+    onBackClick: () -> Unit,
+    onNavigateToCheckout: () -> Unit,
+    onNavigateToDishDetail: (restaurantId: String, dishId: String) -> Unit
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    // Manejar eventos de navegación
+    LaunchedEffect(state.navigationEvent) {
+        when (val event = state.navigationEvent) {
+            is NavigationEvent.NavigateToCheckout -> {
+                onNavigateToCheckout()
+                viewModel.onNavigationEventHandled()
+            }
+            is NavigationEvent.NavigateToDishDetail -> {
+                onNavigateToDishDetail(event.restaurantId, event.dishId)
+                viewModel.onNavigationEventHandled()
+            }
+            null -> { /* No hacer nada */ }
+        }
+    }
+
+    // Diálogo de confirmación para eliminar
+    if (state.showDeleteDialog != null) {
+        DeleteConfirmationDialog(
+            itemName = state.showDeleteDialog!!.dish.name,
+            onConfirm = { viewModel.confirmDeleteItem() },
+            onDismiss = { viewModel.dismissDeleteDialog() }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Carrito de Compras")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        if (state.isEmpty) {
+            EmptyCartContent(
+                modifier = Modifier.padding(innerPadding)
+            )
+        } else {
+            CartContent(
+                state = state,
+                onIncrementQuantity = { viewModel.incrementQuantity(it) },
+                onDecrementQuantity = { viewModel.decrementQuantity(it) },
+                onDeleteItem = { viewModel.showDeleteDialog(it) },
+                onItemClick = { viewModel.onItemClick(it) },
+                onCheckoutClick = { viewModel.onCheckoutClick() },
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyCartContent(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ShoppingCart,
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            )
+            Text(
+                text = "Tu carrito está vacío",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Agrega platillos para comenzar tu pedido",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun CartContent(
+    state: CartState,
+    onIncrementQuantity: (String) -> Unit,
+    onDecrementQuantity: (String) -> Unit,
+    onDeleteItem: (CartItem) -> Unit,
+    onItemClick: (CartItem) -> Unit,
+    onCheckoutClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Lista de items
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            items(
+                items = state.items,
+                key = { it.id }
+            ) { item ->
+                CartItemCard(
+                    item = item,
+                    onIncrementQuantity = { onIncrementQuantity(item.id) },
+                    onDecrementQuantity = { onDecrementQuantity(item.id) },
+                    onDeleteItem = { onDeleteItem(item) },
+                    onItemClick = { onItemClick(item) }
+                )
+            }
+        }
+
+        // Resumen del pedido
+        OrderSummaryCard(
+            state = state,
+            onCheckoutClick = onCheckoutClick
+        )
+    }
+}
+
+@Composable
+fun CartItemCard(
+    item: CartItem,
+    onIncrementQuantity: () -> Unit,
+    onDecrementQuantity: () -> Unit,
+    onDeleteItem: () -> Unit,
+    onItemClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onItemClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Imagen del platillo
+            AsyncImage(
+                model = item.dish.imageURL,
+                contentDescription = item.dish.name,
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            // Información del platillo
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(100.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Nombre y botón eliminar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = item.dish.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = onDeleteItem,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Precio unitario
+                Text(
+                    text = "$${String.format("%.2f", item.dish.price)} c/u",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Controles de cantidad y precio total
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Controles de cantidad
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IconButton(
+                            onClick = onDecrementQuantity,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = "Disminuir",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        Text(
+                            text = item.quantity.toString(),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier.width(32.dp),
+                            textAlign = TextAlign.Center
+                        )
+
+                        IconButton(
+                            onClick = onIncrementQuantity,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Aumentar",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // Precio total del item
+                    Text(
+                        text = "$${String.format("%.2f", item.totalPrice)}",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OrderSummaryCard(
+    state: CartState,
+    onCheckoutClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Resumen del Pedido",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Divider()
+
+            // Número de items
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Items (${state.itemCount})",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "$${String.format("%.2f", state.subtotal)}",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            Divider()
+
+            // Total
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Total",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Text(
+                    text = "$${String.format("%.2f", state.subtotal)}",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Botón de checkout
+            Button(
+                onClick = onCheckoutClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(
+                    text = "Proceder al Pago",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    itemName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = {
+            Text(
+                text = "¿Eliminar platillo?",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = "¿Estás seguro de que deseas eliminar \"$itemName\" del carrito?",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Eliminar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}

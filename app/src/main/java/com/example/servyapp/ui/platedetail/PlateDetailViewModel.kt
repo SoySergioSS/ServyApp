@@ -3,8 +3,8 @@ package com.example.servyapp.ui.platedetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.servyapp.data.repository.CartRepository
 import com.example.servyapp.data.repository.DishRepository
-import com.example.servyapp.domain.model.Dish
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class PlateDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val dishRepository: DishRepository
+    private val dishRepository: DishRepository,
+    private val cartRepository: CartRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlateDetailState())
@@ -43,7 +44,7 @@ class PlateDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             dishRepository.getDishesFromRestaurant(restaurantId)
-                .collect { result: Result<List<Dish>> ->
+                .collect { result ->
                     result.fold(
                         onSuccess = { dishes ->
                             val dish = dishes.find { it.id == dishId }
@@ -82,12 +83,14 @@ class PlateDetailViewModel @Inject constructor(
     fun addToCart() {
         val dish = _uiState.value.dish ?: return
         val quantity = _uiState.value.quantity
+        val restId = restaurantId ?: return
 
-        // TODO: Implementar la lógica de agregar al carrito
-        // Aquí podría llamar a un CartRepository para agregar el item
+        // Agregar al carrito usando el repository
+        cartRepository.addToCart(dish, quantity, restId)
 
         _uiState.update { it.copy(addedToCart = true) }
 
+        // Resetear el estado después de un tiempo
         viewModelScope.launch {
             kotlinx.coroutines.delay(2000)
             _uiState.update { it.copy(addedToCart = false) }
