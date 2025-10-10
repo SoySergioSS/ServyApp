@@ -6,7 +6,9 @@ import com.example.servyapp.data.datasource.UserRemoteDataSource
 import com.example.servyapp.domain.model.User
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class UserRepository @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val sessionManager: SessionManager

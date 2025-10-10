@@ -15,9 +15,9 @@ import com.example.servyapp.navigation.AppNavigation
 @Composable
 fun ServyappApp(){
     Scaffold(
-        topBar = {
-            ServyappTopAppBar()
-        }
+//        topBar = {
+//            ServyappTopAppBar()
+//        }
     ) {
         val navController = rememberNavController()
 
