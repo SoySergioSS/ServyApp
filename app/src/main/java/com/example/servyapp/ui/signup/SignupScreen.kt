@@ -27,7 +27,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.servyapp.R
 import com.example.servyapp.ui.utils.AppLoading
@@ -49,10 +48,8 @@ fun SignupScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Encabezado de la pantalla
         RegisterHeader()
 
-        // Formulario de registro
         RegisterForm(
             email = state.email,
             onEmailChange = { signupViewModel.updateEmail(it) },
@@ -94,9 +91,6 @@ fun SignupScreen(
     if(state.isLoading) AppLoading()
 }
 
-//---
-
-// Componente para el encabezado de la pantalla
 @Composable
 private fun RegisterHeader() {
     Column(
@@ -112,9 +106,6 @@ private fun RegisterHeader() {
     }
 }
 
-//---
-
-// Componente para el formulario de registro
 @Composable
 private fun RegisterForm(
     email: String,

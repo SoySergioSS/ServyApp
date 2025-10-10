@@ -5,7 +5,9 @@ import com.example.servyapp.data.datasource.UserRemoteDataSource
 import com.example.servyapp.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class AuthRepository @Inject constructor( //para iniciar sesion, crear cuenta, cambiar contraseña y desloguearse
     private val authRemoteDataSource: AuthRemoteDataSource
 ) {

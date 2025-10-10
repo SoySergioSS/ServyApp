@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.servyapp.ui.utils.AppLoading
 
 @Composable
 fun ProfileScreen(
@@ -46,13 +45,11 @@ fun ProfileScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Usamos Surface para darle un color de fondo consistente a toda la pantalla
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         if (state.isLoading) {
-            // Reemplazamos AppLoading con un indicador de carga centrado para mejor UX
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -61,7 +58,6 @@ fun ProfileScreen(
                 CircularProgressIndicator()
             }
         } else {
-            // Contenido principal de la pantalla de perfil
             ProfileContent(
                 email = state.email,
                 phone = state.phone,
@@ -91,7 +87,7 @@ fun ProfileContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        // --- SECCIÓN DE AVATAR Y NOMBRE ---
+
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = "Avatar de Perfil",
@@ -112,7 +108,6 @@ fun ProfileContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- SECCIÓN DE INFORMACIÓN DEL USUARIO ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -135,10 +130,8 @@ fun ProfileContent(
             }
         }
 
-        // Spacer que empuja los botones hacia la parte inferior
         Spacer(modifier = Modifier.weight(1f))
 
-        // --- SECCIÓN DE BOTONES DE ACCIÓN ---
         Button(
             onClick = onEditProfile,
             modifier = Modifier.fillMaxWidth()
@@ -157,7 +150,7 @@ fun ProfileContent(
             Icon(
                 Icons.Default.ExitToApp,
                 contentDescription = "Logout",
-                tint = MaterialTheme.colorScheme.error // Color rojo para indicar acción destructiva
+                tint = MaterialTheme.colorScheme.error
             )
             Spacer(Modifier.width(8.dp))
             Text("Logout", color = MaterialTheme.colorScheme.error)
@@ -165,9 +158,6 @@ fun ProfileContent(
     }
 }
 
-/**
- * Un Composable reutilizable para mostrar una fila de información con un icono.
- */
 @Composable
 fun ProfileInfoRow(
     icon: ImageVector,
@@ -190,7 +180,7 @@ fun ProfileInfoRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant // Un color más sutil para la etiqueta
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = value,

@@ -9,11 +9,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.servyapp.ui.Plates.PlatesScreen
+import com.example.servyapp.ui.plates.PlatesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
+import com.example.servyapp.ui.plateDetail.PlateDetailViewModel
+import com.example.servyapp.ui.platedetail.PlateDetailScreen
 import com.example.servyapp.ui.profile.ProfileScreen
 import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
@@ -31,6 +33,7 @@ sealed class Screen(val route: String){
     object Card: Screen("card")
     object Plates: Screen("plates")
     object Profile: Screen("profile")
+    object PlateDetail: Screen("plateDetail")
 }
 
 @Composable
@@ -143,7 +146,16 @@ fun AppNavigation(
 
         composable(route = Screen.Plates.route){
             PlatesScreen(
-                platesViewModel = hiltViewModel()
+                platesViewModel = hiltViewModel(),
+                onBackClick = {
+                    navHostController.popBackStack()
+                },
+                onCartClick = {
+                    //navHostController.navigate(Screen.Cart.route)
+                },
+                onNavigateToDetail = { restaurantId, dishId ->
+                    navHostController.navigate("${Screen.PlateDetail.route}/$restaurantId/$dishId")
+                }
             )
         }
 
@@ -157,6 +169,25 @@ fun AppNavigation(
                             inclusive = true
                         }
                     }
+                }
+            )
+        }
+        composable(route = Screen.PlateDetail.route){
+            val plateDetailViewModel: PlateDetailViewModel = hiltViewModel()
+            val state by plateDetailViewModel.uiState.collectAsState()
+//            LaunchedEffect(state.navigateToCart) {
+//                if(state.navigateToCart){
+//                    navHostController.navigate(Screen.Cart.route)
+//                    plateDetailViewModel.navigationToCartComplete()
+//                }
+//            }
+            PlateDetailScreen(
+                viewModel = plateDetailViewModel,
+                onBackClick = {
+                    navHostController.popBackStack()
+                },
+                onCartClick = {
+                    //navHostController.navigate(Screen.Cart.route) no sé si se usará
                 }
             )
         }

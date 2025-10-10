@@ -5,7 +5,9 @@ import com.example.servyapp.data.datasource.CardRemoteDataSource
 import com.example.servyapp.data.datasource.UserRemoteDataSource
 import com.example.servyapp.domain.model.Card
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class CardRepository @Inject constructor(
     private val cardRemoteDataSource: CardRemoteDataSource
 ) {

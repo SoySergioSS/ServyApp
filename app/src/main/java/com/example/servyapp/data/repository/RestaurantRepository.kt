@@ -3,7 +3,9 @@ package com.example.servyapp.data.repository
 import com.example.servyapp.data.datasource.RestaurantRemoteDataSource
 import com.example.servyapp.domain.model.Restaurant
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class RestaurantRepository @Inject constructor(
     private val remoteDataSource: RestaurantRemoteDataSource
 ) {
