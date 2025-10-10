@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.plateDetail
+package com.example.servyapp.ui.platedetail
 
 import com.example.servyapp.domain.model.Dish
 

@@ -19,5 +19,4 @@ class DishRepository @Inject constructor(
     fun getDishesFromRestaurant(restaurantId: String): Flow<Result<List<Dish>>> =
         dishRemoteDataSource.getDishesFromRestaurant(restaurantId)
 
-
 }

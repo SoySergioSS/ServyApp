@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.plateDetail
+package com.example.servyapp.ui.platedetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
