@@ -88,7 +88,6 @@ class PlateDetailViewModel @Inject constructor(
 
         _uiState.update { it.copy(addedToCart = true) }
 
-        // Resetear el estado después de un tiempo
         viewModelScope.launch {
             kotlinx.coroutines.delay(2000)
             _uiState.update { it.copy(addedToCart = false) }

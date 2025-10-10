@@ -59,7 +59,6 @@ fun PlateDetailScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar Snackbar cuando se agrega al carrito
     LaunchedEffect(state.addedToCart) {
         if (state.addedToCart) {
             snackbarHostState.showSnackbar("Agregado al carrito")
@@ -150,7 +149,6 @@ fun PlateDetailContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Imagen del platillo
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -168,11 +166,9 @@ fun PlateDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Información del platillo
         Column(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            // Nombre
             Text(
                 text = dish.name,
                 style = MaterialTheme.typography.headlineMedium.copy(
@@ -183,7 +179,6 @@ fun PlateDetailContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Precio
             Text(
                 text = "$${String.format("%.2f", dish.price)}",
                 style = MaterialTheme.typography.headlineSmall,
@@ -193,7 +188,6 @@ fun PlateDetailContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Descripción
             Text(
                 text = "Descripción",
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -213,7 +207,6 @@ fun PlateDetailContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Selector de cantidad
             Text(
                 text = "Cantidad",
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -229,12 +222,10 @@ fun PlateDetailContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Controles de cantidad
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Botón decrementar
                     IconButton(
                         onClick = onDecrementQuantity,
                         enabled = state.quantity > 1,
@@ -258,7 +249,6 @@ fun PlateDetailContent(
                         )
                     }
 
-                    // Cantidad
                     Text(
                         text = state.quantity.toString(),
                         style = MaterialTheme.typography.headlineMedium.copy(
@@ -268,7 +258,6 @@ fun PlateDetailContent(
                         textAlign = TextAlign.Center
                     )
 
-                    // Botón incrementar
                     IconButton(
                         onClick = onIncrementQuantity,
                         modifier = Modifier
@@ -284,7 +273,6 @@ fun PlateDetailContent(
                     }
                 }
 
-                // Total
                 Column(
                     horizontalAlignment = Alignment.End
                 ) {
@@ -305,7 +293,6 @@ fun PlateDetailContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón agregar al carrito
             Button(
                 onClick = onAddToCart,
                 modifier = Modifier

@@ -35,9 +35,7 @@ sealed class Screen(val route: String){
     object Card: Screen("card")
     object Plates: Screen("plates")
     object Profile: Screen("profile")
-    // RUTA CORREGIDA: Ahora incluye los parámetros
     object PlateDetail: Screen("plateDetail/{restaurantId}/{dishId}") {
-        // Función auxiliar para construir la ruta de navegación
         fun createRoute(restaurantId: String, dishId: String): String {
             return "plateDetail/$restaurantId/$dishId"
         }
@@ -162,7 +160,6 @@ fun AppNavigation(
                     //navHostController.navigate(Screen.Cart.route)
                 },
                 onNavigateToDetail = { restaurantId, dishId ->
-                    // Uso de la función auxiliar para construir la URL
                     navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
                 }
             )
@@ -182,7 +179,6 @@ fun AppNavigation(
             )
         }
 
-        // CONFIGURACIÓN CORREGIDA DEL DESTINO CON ARGUMENTOS
         composable(
             route = Screen.PlateDetail.route,
             arguments = listOf(

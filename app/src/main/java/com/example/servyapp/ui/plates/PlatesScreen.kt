@@ -48,7 +48,6 @@ fun PlatesScreen(
 ) {
     val state by platesViewModel.uiState.collectAsState()
 
-    // Manejar eventos de navegación
     LaunchedEffect(state.navigatetoPlateDetails) {
         when (val event = state.navigatetoPlateDetails) {
             is NavigationEvent.NavigateToDetail -> {

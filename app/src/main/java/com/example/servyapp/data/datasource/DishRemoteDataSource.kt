@@ -13,9 +13,6 @@ import javax.inject.Singleton
 class DishRemoteDataSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
-    /**
-     * Obtiene los platillos de un restaurante específico en tiempo real
-     */
     fun getDishesFromRestaurant(restaurantId: String): Flow<Result<List<Dish>>> = callbackFlow {
         val listenerRegistration = firestore
             .collection("restaurants")
@@ -38,9 +35,6 @@ class DishRemoteDataSource @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
-    /**
-     * Obtiene los platillos una sola vez (sin listener)
-     */
     suspend fun getDishesOnce(restaurantId: String): Result<List<Dish>> {
         return try {
             val snapshot = firestore
