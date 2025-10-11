@@ -18,6 +18,7 @@ import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
+import com.example.servyapp.ui.orders.OrdersScreen
 import com.example.servyapp.ui.platedetail.PlateDetailViewModel
 import com.example.servyapp.ui.platedetail.PlateDetailScreen
 import com.example.servyapp.ui.profile.ProfileScreen
@@ -43,6 +44,7 @@ sealed class Screen(val route: String){
         }
     }
     object Cart: Screen("cart")
+    object Orders: Screen("orders")
 }
 
 @Composable
@@ -216,10 +218,22 @@ fun AppNavigation(
                     navHostController.popBackStack()
                 },
                 onNavigateToOrders = {
-                    //navHostController.navigate(Screen.Checkout.route)
+                    navHostController.navigate(Screen.Orders.route)
                 },
                 onNavigateToDishDetail = { restaurantId, dishId ->
                     navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
+                }
+            )
+        }
+
+        composable(route = Screen.Orders.route){
+            OrdersScreen(
+                viewModel = hiltViewModel(),
+                onBackClick = {
+                    navHostController.popBackStack()
+                },
+                onNavigateToOrderDetail = {
+                    //navHostController.navigate(Screen.OrderDetail.route)
                 }
             )
         }

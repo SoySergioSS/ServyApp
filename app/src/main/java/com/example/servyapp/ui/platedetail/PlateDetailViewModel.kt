@@ -85,15 +85,21 @@ class PlateDetailViewModel @Inject constructor(
         val quantity = _uiState.value.quantity
         val restId = restaurantId ?: return
 
-        // Agregar al carrito usando el repository
-        cartManager.addToCart(dish, quantity, restId)
-
-        _uiState.update { it.copy(addedToCart = true) }
-
-        // Resetear el estado después de un tiempo
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _uiState.update { it.copy(addedToCart = false) }
+            val added = cartManager.addToCart(dish, quantity, restId)
+
+            if (added) {
+                _uiState.update { it.copy(addedToCart = true, errorMessage = null) }
+
+                kotlinx.coroutines.delay(2000)
+                _uiState.update { it.copy(addedToCart = false) }
+            } else {
+               _uiState.update {
+                    it.copy(
+                        errorMessage = "Solo puedes pedir de un restaurante a la vez. Vacía el carrito para cambiar."
+                    )
+                }
+            }
         }
     }
 

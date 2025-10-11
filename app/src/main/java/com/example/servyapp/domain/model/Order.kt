@@ -11,7 +11,7 @@ data class Order(
     val orderNumber: String = "",
     val pedidos: List<Pedido> = emptyList(),
     val totalAmount: Double = 0.0,
-    val status: OrderStatus = OrderStatus.PENDING
+    val status: OrderStatus = OrderStatus.PENDING //no se si las ordenes tienen status
 )
 
 enum class OrderStatus {

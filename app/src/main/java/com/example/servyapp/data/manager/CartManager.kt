@@ -16,12 +16,21 @@ class CartManager @Inject constructor() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
 
-    fun addToCart(dish: Dish, quantity: Int, restaurantId: String) {
-        _cartItems.update { currentItems ->
-            val existingItem = currentItems.find { it.dish.id == dish.id }
+    fun addToCart(dish: Dish, quantity: Int, restaurantId: String): Boolean {
+        val currentItems = _cartItems.value
+
+        if (currentItems.isNotEmpty()) {
+            val currentRestaurantId = currentItems.first().restaurantId
+            if (restaurantId != currentRestaurantId) {
+                return false
+            }
+        }
+
+        _cartItems.update { items ->
+            val existingItem = items.find { it.dish.id == dish.id }
 
             if (existingItem != null) {
-                currentItems.map { item ->
+                items.map { item ->
                     if (item.dish.id == dish.id) {
                         item.copy(quantity = item.quantity + quantity)
                     } else {
@@ -29,7 +38,7 @@ class CartManager @Inject constructor() {
                     }
                 }
             } else {
-                currentItems + CartItem(
+                items + CartItem(
                     id = generateCartItemId(),
                     dish = dish,
                     quantity = quantity,
@@ -37,6 +46,8 @@ class CartManager @Inject constructor() {
                 )
             }
         }
+
+        return true
     }
 
     fun updateQuantity(cartItemId: String, newQuantity: Int) {

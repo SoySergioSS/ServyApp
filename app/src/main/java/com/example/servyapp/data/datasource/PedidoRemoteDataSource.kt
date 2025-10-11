@@ -1,5 +1,6 @@
 package com.example.servyapp.data.datasource
 
+import android.util.Log
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import com.example.servyapp.domain.model.Pedido
@@ -19,9 +20,6 @@ class PedidoRemoteDataSource @Inject constructor(
 ) {
     private val ordersCollection = firestore.collection("orders")
 
-    /**
-     * Crea una nueva orden con sus pedidos
-     */
     suspend fun createOrder(order: Order): Result<String> {
         return try {
             val docRef = ordersCollection.document()
@@ -33,9 +31,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Obtiene todas las órdenes de un usuario en tiempo real
-     */
     fun getUserOrders(userId: String): Flow<Result<List<Order>>> = callbackFlow {
         val listenerRegistration = ordersCollection
             .whereEqualTo("userId", userId)
@@ -57,9 +52,6 @@ class PedidoRemoteDataSource @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
-    /**
-     * Obtiene una orden específica por ID
-     */
     suspend fun getOrderById(orderId: String): Result<Order> {
         return try {
             val snapshot = ordersCollection.document(orderId).get().await()
@@ -74,9 +66,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Actualiza el estado de una orden completa
-     */
     suspend fun updateOrderStatus(orderId: String, status: OrderStatus): Result<Unit> {
         return try {
             ordersCollection.document(orderId)
@@ -88,9 +77,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Agrega un pedido a una orden existente
-     */
     suspend fun addPedidoToOrder(orderId: String, pedido: Pedido): Result<Unit> {
         return try {
             val orderDoc = ordersCollection.document(orderId)
@@ -118,9 +104,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Elimina un pedido de una orden
-     */
     suspend fun removePedidoFromOrder(orderId: String, pedidoId: String): Result<Unit> {
         return try {
             val orderDoc = ordersCollection.document(orderId)
@@ -154,9 +137,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Actualiza el estado de un pedido específico
-     */
     suspend fun updatePedidoStatus(orderId: String, pedidoId: String, status: PedidoStatus): Result<Unit> {
         return try {
             val orderDoc = ordersCollection.document(orderId)
@@ -195,9 +175,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Actualiza la cantidad de un item dentro de un pedido
-     */
     suspend fun updatePedidoItemQuantity(
         orderId: String,
         pedidoId: String,
@@ -246,9 +223,6 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    /**
-     * Elimina una orden completa
-     */
     suspend fun deleteOrder(orderId: String): Result<Unit> {
         return try {
             ordersCollection.document(orderId).delete().await()
