@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.plates
+package com.example.servyapp.ui.dishes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,13 +14,13 @@ import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @HiltViewModel
-class PlatesViewModel @Inject constructor(
+class DishesViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val dishRepository: DishRepository
 ): ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlatesState())
-    val uiState: StateFlow<PlatesState> = _uiState
+    private val _uiState = MutableStateFlow(DishesState())
+    val uiState: StateFlow<DishesState> = _uiState
 
     init {
         loadRestaurantDishes()
@@ -74,11 +74,11 @@ class PlatesViewModel @Inject constructor(
     fun onDishClick(dish: Dish) {
         val restaurantId = _uiState.value.idRestaurant ?: return
         _uiState.update {
-            it.copy(navigatetoPlateDetails = NavigationEvent.NavigateToDetail(restaurantId, dish.id))
+            it.copy(navigatetoDishDetails = NavigationEvent.NavigateToDetail(restaurantId, dish.id))
         }
     }
 
     fun onNavigationEventHandled() {
-        _uiState.update { it.copy(navigatetoPlateDetails = null) }
+        _uiState.update { it.copy(navigatetoDishDetails = null) }
     }
 }

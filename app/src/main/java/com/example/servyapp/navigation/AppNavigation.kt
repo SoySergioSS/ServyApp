@@ -13,14 +13,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.servyapp.ui.cart.CartScreen
 import com.example.servyapp.ui.cart.CartViewModel
-import com.example.servyapp.ui.plates.PlatesScreen
+import com.example.servyapp.ui.dishes.DishesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
 import com.example.servyapp.ui.orders.OrdersScreen
-import com.example.servyapp.ui.platedetail.PlateDetailViewModel
-import com.example.servyapp.ui.platedetail.PlateDetailScreen
+import com.example.servyapp.ui.dishdetail.DishDetailViewModel
+import com.example.servyapp.ui.dishdetail.DishDetailScreen
 import com.example.servyapp.ui.profile.ProfileScreen
 import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
@@ -36,11 +36,11 @@ sealed class Screen(val route: String){
     object Login: Screen("login")
     object Home: Screen("home")
     object Card: Screen("card")
-    object Plates: Screen("plates")
+    object Dishes: Screen("dishes")
     object Profile: Screen("profile")
-    object PlateDetail: Screen("plateDetail/{restaurantId}/{dishId}") {
+    object DishDetail: Screen("dishDetail/{restaurantId}/{dishId}") {
         fun createRoute(restaurantId: String, dishId: String): String {
-            return "plateDetail/$restaurantId/$dishId"
+            return "dishDetail/$restaurantId/$dishId"
         }
     }
     object Cart: Screen("cart")
@@ -131,10 +131,10 @@ fun AppNavigation(
         composable(route = Screen.Home.route){
             val homeViewModel: HomeViewModel = hiltViewModel()
             val state by homeViewModel.uiState.collectAsState()
-            LaunchedEffect(state.navigateToPlates) {
-                if(state.navigateToPlates){
-                    navHostController.navigate(Screen.Plates.route)
-                    homeViewModel.navigationToPlatesComplete()
+            LaunchedEffect(state.navigateToDishes) {
+                if(state.navigateToDishes){
+                    navHostController.navigate(Screen.Dishes.route)
+                    homeViewModel.navigationToDishesComplete()
                 }
             }
 
@@ -155,9 +155,9 @@ fun AppNavigation(
             )
         }
 
-        composable(route = Screen.Plates.route){
-            PlatesScreen(
-                platesViewModel = hiltViewModel(),
+        composable(route = Screen.Dishes.route){
+            DishesScreen(
+                dishesViewModel = hiltViewModel(),
                 onBackClick = {
                     navHostController.popBackStack()
                 },
@@ -165,7 +165,7 @@ fun AppNavigation(
                     navHostController.navigate(Screen.Cart.route)
                 },
                 onNavigateToDetail = { restaurantId, dishId ->
-                    navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
+                    navHostController.navigate(Screen.DishDetail.createRoute(restaurantId, dishId))
                 }
             )
         }
@@ -185,22 +185,22 @@ fun AppNavigation(
         }
 
         composable(
-            route = Screen.PlateDetail.route,
+            route = Screen.DishDetail.route,
             arguments = listOf(
                 navArgument("restaurantId") { type = NavType.StringType },
                 navArgument("dishId") { type = NavType.StringType }
             )
         ){
-            val plateDetailViewModel: PlateDetailViewModel = hiltViewModel()
-            val state by plateDetailViewModel.uiState.collectAsState()
+            val dishDetailViewModel: DishDetailViewModel = hiltViewModel()
+            val state by dishDetailViewModel.uiState.collectAsState()
 //            LaunchedEffect(state.navigateToCart) {
 //                if(state.navigateToCart){
 //                    navHostController.navigate(Screen.Cart.route)
-//                    plateDetailViewModel.navigationToCartComplete()
+//                    dishDetailViewModel.navigationToCartComplete()
 //                }
 //            }
-            PlateDetailScreen(
-                viewModel = plateDetailViewModel,
+            DishDetailScreen(
+                viewModel = dishDetailViewModel,
                 onBackClick = {
                     navHostController.popBackStack()
                 },
@@ -221,7 +221,7 @@ fun AppNavigation(
                     navHostController.navigate(Screen.Orders.route)
                 },
                 onNavigateToDishDetail = { restaurantId, dishId ->
-                    navHostController.navigate(Screen.PlateDetail.createRoute(restaurantId, dishId))
+                    navHostController.navigate(Screen.DishDetail.createRoute(restaurantId, dishId))
                 }
             )
         }

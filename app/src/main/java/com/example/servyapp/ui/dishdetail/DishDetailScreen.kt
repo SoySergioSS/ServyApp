@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.platedetail
+package com.example.servyapp.ui.dishdetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,8 +51,8 @@ import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlateDetailScreen(
-    viewModel: PlateDetailViewModel,
+fun DishDetailScreen(
+    viewModel: DishDetailViewModel,
     onBackClick: () -> Unit,
     onCartClick: () -> Unit
 ) {
@@ -110,7 +110,7 @@ fun PlateDetailScreen(
             }
 
             state.dish != null -> {
-                PlateDetailContent(
+                DishDetailContent(
                     state = state,
                     onIncrementQuantity = { viewModel.incrementQuantity() },
                     onDecrementQuantity = { viewModel.decrementQuantity() },
@@ -123,8 +123,8 @@ fun PlateDetailScreen(
 }
 
 @Composable
-fun PlateDetailContent(
-    state: PlateDetailState,
+fun DishDetailContent(
+    state: DishDetailState,
     onIncrementQuantity: () -> Unit,
     onDecrementQuantity: () -> Unit,
     onAddToCart: () -> Unit,

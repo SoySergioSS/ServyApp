@@ -1,15 +1,15 @@
-package com.example.servyapp.ui.plates
+package com.example.servyapp.ui.dishes
 
 import com.example.servyapp.domain.model.Dish
 
-data class PlatesState (
+data class DishesState (
     val idRestaurant: String? = null,
 
     val dishes: List<Dish> = emptyList(),
 
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val navigatetoPlateDetails: NavigationEvent? = null
+    val navigatetoDishDetails: NavigationEvent? = null
 )
 
 sealed class NavigationEvent {

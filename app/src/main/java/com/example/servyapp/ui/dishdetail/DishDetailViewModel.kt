@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.platedetail
+package com.example.servyapp.ui.dishdetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -13,14 +13,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class PlateDetailViewModel @Inject constructor(
+class DishDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val dishRepository: DishRepository,
     private val cartManager: CartManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlateDetailState())
-    val uiState: StateFlow<PlateDetailState> = _uiState
+    private val _uiState = MutableStateFlow(DishDetailState())
+    val uiState: StateFlow<DishDetailState> = _uiState
 
     private val dishId: String? = savedStateHandle["dishId"]
     private val restaurantId: String? = savedStateHandle["restaurantId"]
