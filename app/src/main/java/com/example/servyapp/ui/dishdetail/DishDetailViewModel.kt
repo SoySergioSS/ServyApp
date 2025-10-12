@@ -1,9 +1,9 @@
-package com.example.servyapp.ui.platedetail
+package com.example.servyapp.ui.dishdetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.servyapp.data.repository.CartRepository
+import com.example.servyapp.data.manager.CartManager
 import com.example.servyapp.data.repository.DishRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,14 +13,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class PlateDetailViewModel @Inject constructor(
+class DishDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val dishRepository: DishRepository,
-    private val cartRepository: CartRepository
+    private val cartManager: CartManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlateDetailState())
-    val uiState: StateFlow<PlateDetailState> = _uiState
+    private val _uiState = MutableStateFlow(DishDetailState())
+    val uiState: StateFlow<DishDetailState> = _uiState
 
     private val dishId: String? = savedStateHandle["dishId"]
     private val restaurantId: String? = savedStateHandle["restaurantId"]
@@ -85,15 +85,21 @@ class PlateDetailViewModel @Inject constructor(
         val quantity = _uiState.value.quantity
         val restId = restaurantId ?: return
 
-        // Agregar al carrito usando el repository
-        cartRepository.addToCart(dish, quantity, restId)
-
-        _uiState.update { it.copy(addedToCart = true) }
-
-        // Resetear el estado después de un tiempo
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _uiState.update { it.copy(addedToCart = false) }
+            val added = cartManager.addToCart(dish, quantity, restId)
+
+            if (added) {
+                _uiState.update { it.copy(addedToCart = true, errorMessage = null) }
+
+                kotlinx.coroutines.delay(2000)
+                _uiState.update { it.copy(addedToCart = false) }
+            } else {
+               _uiState.update {
+                    it.copy(
+                        errorMessage = "Solo puedes pedir de un restaurante a la vez. Vacía el carrito para cambiar."
+                    )
+                }
+            }
         }
     }
 

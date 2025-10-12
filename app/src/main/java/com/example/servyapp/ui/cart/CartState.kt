@@ -20,6 +20,6 @@ data class CartState(
 }
 
 sealed class NavigationEvent {
-    object NavigateToCheckout : NavigationEvent()
+    object NavigateToOrders : NavigationEvent()
     data class NavigateToDishDetail(val restaurantId: String, val dishId: String) : NavigationEvent()
 }

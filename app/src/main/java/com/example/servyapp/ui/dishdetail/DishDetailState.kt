@@ -1,8 +1,8 @@
-package com.example.servyapp.ui.platedetail
+package com.example.servyapp.ui.dishdetail
 
 import com.example.servyapp.domain.model.Dish
 
-data class PlateDetailState(
+data class DishDetailState(
     val dish: Dish? = null,
     val quantity: Int = 1,
     val isLoading: Boolean = false,

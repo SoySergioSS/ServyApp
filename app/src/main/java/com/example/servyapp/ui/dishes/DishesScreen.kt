@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.plates
+package com.example.servyapp.ui.dishes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,19 +40,19 @@ import com.example.servyapp.domain.model.Dish
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlatesScreen(
-    platesViewModel: PlatesViewModel,
+fun DishesScreen(
+    dishesViewModel: DishesViewModel,
     onBackClick: () -> Unit,
     onCartClick: () -> Unit,
     onNavigateToDetail: (restaurantId: String, dishId: String) -> Unit
 ) {
-    val state by platesViewModel.uiState.collectAsState()
+    val state by dishesViewModel.uiState.collectAsState()
 
-    LaunchedEffect(state.navigatetoPlateDetails) {
-        when (val event = state.navigatetoPlateDetails) {
+    LaunchedEffect(state.navigatetoDishDetails) {
+        when (val event = state.navigatetoDishDetails) {
             is NavigationEvent.NavigateToDetail -> {
                 onNavigateToDetail(event.restaurantId, event.dishId)
-                platesViewModel.onNavigationEventHandled()
+                dishesViewModel.onNavigationEventHandled()
             }
             null -> { /* No hacer nada */ }
         }
@@ -133,7 +133,7 @@ fun PlatesScreen(
                     items(state.dishes) { dish ->
                         DishItem(
                             dish = dish,
-                            onDishClick = { platesViewModel.onDishClick(it) }
+                            onDishClick = { dishesViewModel.onDishClick(it) }
                         )
                     }
                 }

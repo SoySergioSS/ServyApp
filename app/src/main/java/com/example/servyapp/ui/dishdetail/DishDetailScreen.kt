@@ -1,4 +1,4 @@
-package com.example.servyapp.ui.platedetail
+package com.example.servyapp.ui.dishdetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,8 +51,8 @@ import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlateDetailScreen(
-    viewModel: PlateDetailViewModel,
+fun DishDetailScreen(
+    viewModel: DishDetailViewModel,
     onBackClick: () -> Unit,
     onCartClick: () -> Unit
 ) {
@@ -63,6 +63,11 @@ fun PlateDetailScreen(
         if (state.addedToCart) {
             snackbarHostState.showSnackbar("Agregado al carrito")
             viewModel.resetAddedToCartState()
+        }
+    }
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -104,25 +109,8 @@ fun PlateDetailScreen(
                 }
             }
 
-            state.errorMessage != null -> {
-                Box(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = state.errorMessage ?: "Error desconocido",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-
             state.dish != null -> {
-                PlateDetailContent(
+                DishDetailContent(
                     state = state,
                     onIncrementQuantity = { viewModel.incrementQuantity() },
                     onDecrementQuantity = { viewModel.decrementQuantity() },
@@ -135,8 +123,8 @@ fun PlateDetailScreen(
 }
 
 @Composable
-fun PlateDetailContent(
-    state: PlateDetailState,
+fun DishDetailContent(
+    state: DishDetailState,
     onIncrementQuantity: () -> Unit,
     onDecrementQuantity: () -> Unit,
     onAddToCart: () -> Unit,

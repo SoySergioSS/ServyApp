@@ -40,11 +40,11 @@ class HomeViewModel @Inject constructor(
     fun saveSelectedRestaurant(restaurantId: String) {
         viewModelScope.launch {
             userRepository.saveSelectedRestaurantId(restaurantId)
-            _uiState.update { it.copy(navigateToPlates = true) }
+            _uiState.update { it.copy(navigateToDishes = true) }
         }
     }
 
-    fun navigationToPlatesComplete() { //para que se pueda volver usando el boton de atras del sistema
-        _uiState.update { it.copy(navigateToPlates = false) }
+    fun navigationToDishesComplete() { //para que se pueda volver usando el boton de atras del sistema
+        _uiState.update { it.copy(navigateToDishes = false) }
     }
 }

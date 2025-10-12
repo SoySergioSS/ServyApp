@@ -1,7 +1,7 @@
 package com.example.servyapp.data.repository
 
 import com.example.servyapp.data.datasource.AuthRemoteDataSource
-import com.example.servyapp.data.datasource.SessionManager
+import com.example.servyapp.data.manager.SessionManager
 import com.example.servyapp.data.datasource.UserRemoteDataSource
 import com.example.servyapp.domain.model.User
 import kotlinx.coroutines.flow.StateFlow
