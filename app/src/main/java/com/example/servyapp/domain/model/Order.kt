@@ -6,7 +6,7 @@ import com.google.firebase.firestore.PropertyName
 data class Order(
     val id: String = "",
     val userId: String = "",
-    @PropertyName("created_at")
+    @JvmField @PropertyName("created_at")
     val createdAt: Timestamp = Timestamp.now(),
     val orderNumber: String = "",
     val pedidos: List<Pedido> = emptyList(),

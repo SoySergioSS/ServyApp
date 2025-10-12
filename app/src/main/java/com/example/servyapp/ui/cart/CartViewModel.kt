@@ -106,7 +106,6 @@ class CartViewModel @Inject constructor(
                 val cartItems = _uiState.value.items
                 if (cartItems.isEmpty()) return@launch
 
-                //más adelante arreglar que solo se pida de un restaurante
                 val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
 
                 val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
@@ -149,9 +148,9 @@ class CartViewModel @Inject constructor(
                     status = OrderStatus.PENDING
                 )
 
-                pedidoRepository.createOrder(order).fold(
+                pedidoRepository.createOrder(order, cartItems.first().restaurantId).fold(
                     onSuccess = {
-                        cartManager.clearCart()
+                        clearCart()
 
                         _uiState.update {
                             it.copy(

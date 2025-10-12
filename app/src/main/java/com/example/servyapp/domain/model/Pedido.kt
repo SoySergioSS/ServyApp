@@ -10,7 +10,7 @@ data class Pedido(
     val restaurantName: String = "",
     val items: List<PedidoItem> = emptyList(),
     val subtotal: Double = 0.0,
-    @PropertyName("created_at")
+    @JvmField @PropertyName("created_at")
     val createdAt: Timestamp = Timestamp.now(),
     val status: PedidoStatus = PedidoStatus.PENDING
 )
@@ -19,7 +19,6 @@ enum class PedidoStatus {
     PENDING,      // Pendiente
     CONFIRMED,    // Confirmado por el restaurante
     PREPARING,    // En preparación
-    READY,        // Listo para recoger
     DELIVERED,    // Entregado
     CANCELLED     // Cancelado
 }
