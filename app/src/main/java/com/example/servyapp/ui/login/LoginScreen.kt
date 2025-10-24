@@ -10,8 +10,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.servyapp.ui.theme.ServyAppTheme
 
 @Composable
 fun LoginScreen(
@@ -20,6 +19,30 @@ fun LoginScreen(
 ) {
     val state by loginViewModel.uiState.collectAsState()
 
+    LoginContent(
+        state = state,
+        onEmailChange = { loginViewModel.updateEmail(it) },
+        onPasswordChange = { loginViewModel.updatePassword(it) },
+        onLoginClick = { loginViewModel.loginButtonPressed() },
+        onSignupClick = signupButtonPressed, // Se pasa la acción de navegación
+        onToggleForgotDialog = { loginViewModel.toggleForgotDialog(it) },
+        onForgotEmailChange = { loginViewModel.updateForgotEmail(it) },
+        onForgotPasswordClick = { loginViewModel.forgotPassword() },
+    )
+
+}
+
+@Composable
+fun LoginContent(
+    state: LoginState,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
+    onSignupClick: () -> Unit,
+    onToggleForgotDialog: (Boolean) -> Unit,
+    onForgotEmailChange: (String) -> Unit,
+    onForgotPasswordClick: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -31,9 +54,9 @@ fun LoginScreen(
 
         LoginForm(
             email = state.email,
-            onEmailChange = { loginViewModel.updateEmail(it) },
+            onEmailChange = onEmailChange,
             password = state.password,
-            onPasswordChange = { loginViewModel.updatePassword(it) }
+            onPasswordChange = onPasswordChange
         )
         if(state.mostrarMensajeError){
             Text(state.errorMessage)
@@ -42,7 +65,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { loginViewModel.loginButtonPressed() },
+            onClick = onLoginClick,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = "Iniciar Sesión")
@@ -51,7 +74,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
-            onClick = { loginViewModel.toggleForgotDialog(true) },
+            onClick = { onToggleForgotDialog(true) },
             modifier = Modifier.align(Alignment.End)
         ) {
             Text(text = "¿Olvidaste tu contraseña?")
@@ -59,12 +82,12 @@ fun LoginScreen(
 
         if (state.showForgotDialog) {
             AlertDialog(
-                onDismissRequest = { loginViewModel.toggleForgotDialog(false) },
+                onDismissRequest = { onToggleForgotDialog(false) },
                 title = { Text("Restablecer contraseña") },
                 text = {
                     OutlinedTextField(
                         value = state.forgotEmail,
-                        onValueChange = { loginViewModel.updateForgotEmail(it) },
+                        onValueChange = onForgotEmailChange,
                         label = { Text("Correo") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -72,19 +95,19 @@ fun LoginScreen(
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = { loginViewModel.forgotPassword() }) {
+                    TextButton(onClick = onForgotPasswordClick) {
                         Text("Enviar")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { loginViewModel.toggleForgotDialog(false) }) {
+                    TextButton(onClick = { onToggleForgotDialog(false) }) {
                         Text("Cancelar")
                     }
                 }
             )
         }
 
-        LoginFooter(onSignupClicked = signupButtonPressed)
+        LoginFooter(onSignupClicked = onSignupClick)
     }
 }
 
@@ -158,9 +181,26 @@ private fun LoginFooter(
     showBackground = true
 )
 @Composable
-fun LoginScreenPreview() {
-    LoginScreen(
-        loginViewModel = viewModel(),
-        signupButtonPressed = {}
-    )
+fun LoginContentPreview() {
+    ServyAppTheme {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LoginContent(
+                state = LoginState(
+                    email = "preview@test.com",
+                    password = "password123",
+                    mostrarMensajeError = true,
+                    errorMessage = "Error de ejemplo para el preview",
+                    showForgotDialog = true,
+                    forgotEmail = "forgot@test.com"
+                ),
+                onEmailChange = {},
+                onPasswordChange = {},
+                onLoginClick = {},
+                onSignupClick = {},
+                onToggleForgotDialog = {},
+                onForgotEmailChange = {},
+                onForgotPasswordClick = {}
+            )
+        }
+    }
 }
