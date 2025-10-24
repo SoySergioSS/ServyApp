@@ -45,22 +45,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
+import com.example.servyapp.domain.model.Pedido
+import com.example.servyapp.ui.theme.ServyAppTheme
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 1. CONTENEDOR (State-Holder)
+ *
+ * Se encarga de la lógica: obtener el ViewModel, manejar
+ * los eventos de navegación y recolectar el estado.
+ */
 @Composable
 fun OrdersScreen(
-    viewModel: OrdersViewModel,
+    viewModel: OrdersViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onNavigateToOrderDetail: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    // El LaunchedEffect para navegar se queda aquí,
+    // ya que es lógica de navegación.
     LaunchedEffect(state.navigationEvent) {
         when (val event = state.navigationEvent) {
             is NavigationEvent.NavigateToOrderDetail -> {
@@ -71,7 +83,34 @@ fun OrdersScreen(
         }
     }
 
+    // Llamamos al Composable de UI (Contenido)
+    OrdersContent(
+        state = state,
+        onBackClick = onBackClick,
+        onRefreshClick = { viewModel.refreshOrders() },
+        onOrderClick = { viewModel.onOrderClick(it) },
+        onRetryClick = { viewModel.refreshOrders() }
+    )
+}
+
+/**
+ * 2. CONTENIDO (Stateless)
+ *
+ * Se encarga SOLO de la UI. Recibe el estado y las lambdas
+ * para notificar eventos.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OrdersContent(
+    state: OrdersState,
+    onBackClick: () -> Unit,
+    onRefreshClick: () -> Unit,
+    onOrderClick: (Order) -> Unit,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -86,7 +125,7 @@ fun OrdersScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refreshOrders() }) {
+                    IconButton(onClick = onRefreshClick) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Actualizar"
@@ -96,6 +135,7 @@ fun OrdersScreen(
             )
         }
     ) { innerPadding ->
+        // El `when` ahora vive en el Composable de Contenido
         when {
             state.isLoading -> {
                 Box(
@@ -126,7 +166,7 @@ fun OrdersScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
-                        Button(onClick = { viewModel.refreshOrders() }) {
+                        Button(onClick = onRetryClick) {
                             Text("Reintentar")
                         }
                     }
@@ -142,13 +182,16 @@ fun OrdersScreen(
             else -> {
                 OrdersList(
                     orders = state.orders,
-                    onOrderClick = { viewModel.onOrderClick(it) },
+                    onOrderClick = onOrderClick, // Se pasa la lambda
                     modifier = Modifier.padding(innerPadding)
                 )
             }
         }
     }
 }
+
+// --- El resto de los Composables (EmptyOrdersContent, OrdersList, etc.) ---
+// --- no necesitan cambios, ya que eran stateless.                 ---
 
 @Composable
 fun EmptyOrdersContent(
@@ -433,4 +476,93 @@ fun OrderStatusBadge(status: OrderStatus) {
 private fun formatDate(date: Date): String {
     val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
     return formatter.format(date)
+}
+
+
+/**
+ * 3. PREVIEW FUNCIONAL
+ *
+ * Creamos un preview para `OrdersContent` pasándole un estado de prueba.
+ */
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun OrdersContentPreview_WithOrders() {
+    val previewOrder = Order(
+        id = "1",
+        orderNumber = "12345",
+        createdAt = Timestamp.now(),
+        status = OrderStatus.PENDING,
+        totalAmount = 150.50,
+        pedidos = listOf(
+            Pedido(
+                id = "p1",
+                restaurantName = "Restaurante Famoso",
+                items = emptyList(), // No necesitamos items para este preview
+                subtotal = 150.50
+            )
+        )
+    )
+
+    ServyAppTheme {
+        OrdersContent(
+            state = OrdersState(
+                orders = listOf(previewOrder, previewOrder.copy(id = "2", status = OrderStatus.IN_PROGRESS)),
+                isLoading = false,
+                errorMessage = null
+            ),
+            onBackClick = {},
+            onRefreshClick = {},
+            onOrderClick = {},
+            onRetryClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun OrdersContentPreview_Empty() {
+    ServyAppTheme {
+        OrdersContent(
+            state = OrdersState(
+                orders = emptyList(),
+                isLoading = false,
+                errorMessage = null
+            ),
+            onBackClick = {},
+            onRefreshClick = {},
+            onOrderClick = {},
+            onRetryClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun OrdersContentPreview_Error() {
+    ServyAppTheme {
+        OrdersContent(
+            state = OrdersState(
+                isLoading = false,
+                errorMessage = "No se pudieron cargar las órdenes. Revisa tu conexión."
+            ),
+            onBackClick = {},
+            onRefreshClick = {},
+            onOrderClick = {},
+            onRetryClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun OrdersContentPreview_Loading() {
+    ServyAppTheme {
+        OrdersContent(
+            state = OrdersState(isLoading = true),
+            onBackClick = {},
+            onRefreshClick = {},
+            onOrderClick = {},
+            onRetryClick = {}
+        )
+    }
 }
