@@ -50,20 +50,30 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.servyapp.domain.model.CartItem
+import com.example.servyapp.domain.model.Dish
+import com.example.servyapp.ui.theme.ServyAppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 1. CONTENEDOR (State-Holder)
+ *
+ * Se encarga de la lógica: obtener el ViewModel, manejar
+ * los eventos de navegación y recolectar el estado.
+ */
 @Composable
 fun CartScreen(
-    viewModel: CartViewModel,
+    viewModel: CartViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onNavigateToOrders: () -> Unit,
     onNavigateToDishDetail: (restaurantId: String, dishId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    // La lógica de navegación se queda en el contenedor
     LaunchedEffect(state.navigationEvent) {
         when (val event = state.navigationEvent) {
             is NavigationEvent.NavigateToOrders -> {
@@ -78,15 +88,51 @@ fun CartScreen(
         }
     }
 
+    // Llamamos al Composable de UI (Contenido)
+    CartScreenContent(
+        state = state,
+        onBackClick = onBackClick,
+        onIncrementQuantity = { viewModel.incrementQuantity(it) },
+        onDecrementQuantity = { viewModel.decrementQuantity(it) },
+        onDeleteItem = { viewModel.showDeleteDialog(it) },
+        onItemClick = { viewModel.onItemClick(it) },
+        onPedidoClick = { viewModel.onPedidoClick() },
+        onConfirmDelete = { viewModel.confirmDeleteItem() },
+        onDismissDelete = { viewModel.dismissDeleteDialog() }
+    )
+}
+
+/**
+ * 2. CONTENIDO (Stateless)
+ *
+ * Se encarga SOLO de la UI. Recibe el estado y las lambdas
+ * para notificar eventos.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CartScreenContent(
+    state: CartState,
+    onBackClick: () -> Unit,
+    onIncrementQuantity: (String) -> Unit,
+    onDecrementQuantity: (String) -> Unit,
+    onDeleteItem: (CartItem) -> Unit,
+    onItemClick: (CartItem) -> Unit,
+    onPedidoClick: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    onDismissDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // El diálogo de confirmación ahora vive aquí
     if (state.showDeleteDialog != null) {
         DeleteConfirmationDialog(
-            itemName = state.showDeleteDialog!!.dish.name,
-            onConfirm = { viewModel.confirmDeleteItem() },
-            onDismiss = { viewModel.dismissDeleteDialog() }
+            itemName = state.showDeleteDialog.dish.name,
+            onConfirm = onConfirmDelete,
+            onDismiss = onDismissDelete
         )
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -108,18 +154,23 @@ fun CartScreen(
                 modifier = Modifier.padding(innerPadding)
             )
         } else {
+            // Este es el 'CartContent' que ya existía (LazyColumn + Resumen)
             CartContent(
                 state = state,
-                onIncrementQuantity = { viewModel.incrementQuantity(it) },
-                onDecrementQuantity = { viewModel.decrementQuantity(it) },
-                onDeleteItem = { viewModel.showDeleteDialog(it) },
-                onItemClick = { viewModel.onItemClick(it) },
-                onPedidoClick = { viewModel.onPedidoClick() },
+                onIncrementQuantity = onIncrementQuantity,
+                onDecrementQuantity = onDecrementQuantity,
+                onDeleteItem = onDeleteItem,
+                onItemClick = onItemClick,
+                onPedidoClick = onPedidoClick,
                 modifier = Modifier.padding(innerPadding)
             )
         }
     }
 }
+
+
+// --- El resto de los Composables (EmptyCartContent, CartContent, etc.) ---
+// --- no necesitan cambios, ya que eran stateless.                 ---
 
 @Composable
 fun EmptyCartContent(
@@ -154,6 +205,10 @@ fun EmptyCartContent(
     }
 }
 
+/**
+ * Este es el Composable que ya tenías, que contiene la LazyColumn
+ * y el OrderSummaryCard. Ya era stateless, así que solo lo movemos aquí.
+ */
 @Composable
 fun CartContent(
     state: CartState,
@@ -452,4 +507,91 @@ fun DeleteConfirmationDialog(
             }
         }
     )
+}
+
+
+/**
+ * 3. PREVIEWS FUNCIONALES
+ */
+
+// Datos de prueba para los Previews
+private val previewDish = Dish(
+    id = "d1",
+    name = "Hamburguesa Doble Queso",
+    price = 12.50,
+    imageURL = "" // No es necesario para el preview si Coil no carga
+)
+private val previewCartItem = CartItem(
+    id = "c1",
+    dish = previewDish,
+    quantity = 2,
+    restaurantId = "r1"
+)
+private val previewCartItem2 = CartItem(
+    id = "c2",
+    dish = previewDish.copy(id = "d2", name = "Papas Fritas Grandes", price = 4.75),
+    quantity = 1,
+    restaurantId = "r1"
+)
+
+@Preview(showBackground = true, showSystemUi = true, name = "Carrito con Items")
+@Composable
+fun CartScreenContentPreview_WithItems() {
+    ServyAppTheme {
+        CartScreenContent(
+            state = CartState(
+                items = listOf(previewCartItem, previewCartItem2)
+            ),
+            onBackClick = {},
+            onIncrementQuantity = {},
+            onDecrementQuantity = {},
+            onDeleteItem = {},
+            onItemClick = {},
+            onPedidoClick = {},
+            onConfirmDelete = {},
+            onDismissDelete = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Carrito Vacío")
+@Composable
+fun CartScreenContentPreview_Empty() {
+    ServyAppTheme {
+        CartScreenContent(
+            state = CartState(items = emptyList()), // state.isEmpty será true
+            onBackClick = {},
+            onIncrementQuantity = {},
+            onDecrementQuantity = {},
+            onDeleteItem = {},
+            onItemClick = {},
+            onPedidoClick = {},
+            onConfirmDelete = {},
+            onDismissDelete = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Diálogo de Borrar")
+@Composable
+fun CartScreenContentPreview_DeleteDialog() {
+    ServyAppTheme {
+        // Usamos el truco del Box para que el diálogo se muestre en el preview
+        Box(modifier = Modifier.fillMaxSize()) {
+            CartScreenContent(
+                state = CartState(
+                    items = listOf(previewCartItem),
+                    showDeleteDialog = previewCartItem // <-- Aquí activamos el diálogo
+                ),
+                onBackClick = {},
+                onIncrementQuantity = {},
+                onDecrementQuantity = {},
+                onDeleteItem = {},
+                onItemClick = {},
+                onPedidoClick = {},
+                onConfirmDelete = {},
+                onDismissDelete = {}
+            )
+        }
+    }
 }
