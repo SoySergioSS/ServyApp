@@ -1,5 +1,6 @@
 package com.example.servyapp.ui.orders
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -355,7 +356,9 @@ fun OrderCard(
                 }
 
                 Button(
-                    onClick = {  onClick(order.id) },
+                    onClick = {
+                        Log.d("OrderDebug", "ID de orden clickeada: ${order.id}")
+                        onClick(order.id) },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer

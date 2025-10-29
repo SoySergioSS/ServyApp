@@ -1,5 +1,6 @@
 package com.example.servyapp.ui.orderdetail
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servyapp.data.manager.SessionManager
@@ -28,6 +29,9 @@ class OrderDetailViewModel @Inject constructor(
     fun loadOrderById(orderId: String) {
         viewModelScope.launch {
             val restaurantId = sessionManager.selectedRestaurantId.value
+            Log.d("OrderDebug", "Intentando cargar orden: $orderId")
+            Log.d("OrderDebug", "Restaurant ID actual: $restaurantId")
+
             if (restaurantId == null) {
                 _uiState.update {
                     it.copy(errorMessage = "Restaurante no seleccionado", isLoading = false)
@@ -40,9 +44,11 @@ class OrderDetailViewModel @Inject constructor(
             val result = pedidoRepository.getOrderById(orderId, restaurantId)
             result.fold(
                 onSuccess = { order ->
+                    Log.d("OrderDebug", "Orden encontrada: ${order.id}")
                     _uiState.update { it.copy(order = order, isLoading = false, errorMessage = null) }
                 },
                 onFailure = { e ->
+                    Log.e("OrderDebug", "Error al cargar orden: ${e.message}", e)
                     _uiState.update { it.copy(errorMessage = "Error al cargar pedido: ${e.message}", isLoading = false) }
                 }
             )

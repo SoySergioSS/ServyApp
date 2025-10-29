@@ -241,7 +241,7 @@ fun AppNavigation(
                     navHostController.popBackStack()
                 },
                 onNavigateToOrderDetail = {
-                    //navHostController.navigate(Screen.OrderDetail.route)
+                    navHostController.navigate(Screen.OrderDetail.route)
                 }
             )
         }
