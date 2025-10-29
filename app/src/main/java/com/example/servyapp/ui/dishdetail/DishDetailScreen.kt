@@ -46,32 +46,78 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.servyapp.domain.model.Dish
+import com.example.servyapp.ui.theme.ServyAppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 1. CONTENEDOR (State-Holder)
+ *
+ * Se encarga de la lógica: obtener el ViewModel, manejar
+ * los side-effects (Snackbars) y recolectar el estado.
+ */
 @Composable
 fun DishDetailScreen(
-    viewModel: DishDetailViewModel,
+    viewModel: DishDetailViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onCartClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Side-effect para notificar "Agregado al carrito"
     LaunchedEffect(state.addedToCart) {
         if (state.addedToCart) {
             snackbarHostState.showSnackbar("Agregado al carrito")
             viewModel.resetAddedToCartState()
         }
     }
+
+    // Side-effect para notificar error al agregar (ej. carrito de otro restaurante)
     LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let { message ->
+        // Solo mostramos el snackbar de error si NO estamos en un estado de error de carga
+        // (es decir, el error fue por una acción, no por cargar la página)
+        val message = state.errorMessage
+        if (state.dish != null && !state.isLoading && message != null) {
             snackbarHostState.showSnackbar(message)
         }
     }
 
+    // Llamamos al Composable de UI (Contenido)
+    DishDetailScreenContent(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onBackClick = onBackClick,
+        onCartClick = onCartClick,
+        onIncrementQuantity = { viewModel.incrementQuantity() },
+        onDecrementQuantity = { viewModel.decrementQuantity() },
+        onAddToCart = { viewModel.addToCart() }
+    )
+}
+
+/**
+ * 2. CONTENIDO (Stateless)
+ *
+ * Se encarga SOLO de la UI. Contiene el Scaffold y el `when`
+ * para decidir qué estado mostrar.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DishDetailScreenContent(
+    state: DishDetailState,
+    snackbarHostState: SnackbarHostState,
+    onBackClick: () -> Unit,
+    onCartClick: () -> Unit,
+    onIncrementQuantity: () -> Unit,
+    onDecrementQuantity: () -> Unit,
+    onAddToCart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -97,6 +143,7 @@ fun DishDetailScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
+        // Este `when` ahora maneja todos los estados de la UI
         when {
             state.isLoading -> {
                 Box(
@@ -109,29 +156,69 @@ fun DishDetailScreen(
                 }
             }
 
+            // Si hay un error DE CARGA (el platillo es null)
+            state.dish == null && state.errorMessage != null -> {
+                Box(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = state.errorMessage,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
             state.dish != null -> {
-                DishDetailContent(
-                    state = state,
-                    onIncrementQuantity = { viewModel.incrementQuantity() },
-                    onDecrementQuantity = { viewModel.decrementQuantity() },
-                    onAddToCart = { viewModel.addToCart() },
+                // El contenido principal del platillo
+                DishDetailBody(
+                    dish = state.dish,
+                    quantity = state.quantity,
+                    onIncrementQuantity = onIncrementQuantity,
+                    onDecrementQuantity = onDecrementQuantity,
+                    onAddToCart = onAddToCart,
                     modifier = Modifier.padding(innerPadding)
                 )
+            }
+
+            // Caso de borde (no loading, no error, no dish)
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Platillo no disponible.",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
         }
     }
 }
 
+/**
+ * 3. CONTENIDO DEL CUERPO (Stateless)
+ *
+ * Este era tu `DishDetailContent` original. Lo renombré a `DishDetailBody`
+ * y ahora recibe los parámetros exactos que necesita, en lugar de todo el `state`.
+ */
 @Composable
-fun DishDetailContent(
-    state: DishDetailState,
+fun DishDetailBody(
+    dish: Dish,
+    quantity: Int,
     onIncrementQuantity: () -> Unit,
     onDecrementQuantity: () -> Unit,
     onAddToCart: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dish = state.dish ?: return
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -216,12 +303,12 @@ fun DishDetailContent(
                 ) {
                     IconButton(
                         onClick = onDecrementQuantity,
-                        enabled = state.quantity > 1,
+                        enabled = quantity > 1, // Recibe 'quantity'
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
                             .background(
-                                if (state.quantity > 1)
+                                if (quantity > 1) // Recibe 'quantity'
                                     MaterialTheme.colorScheme.primaryContainer
                                 else
                                     MaterialTheme.colorScheme.surfaceVariant
@@ -230,7 +317,7 @@ fun DishDetailContent(
                         Icon(
                             imageVector = Icons.Default.Remove,
                             contentDescription = "Disminuir cantidad",
-                            tint = if (state.quantity > 1)
+                            tint = if (quantity > 1) // Recibe 'quantity'
                                 MaterialTheme.colorScheme.onPrimaryContainer
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -238,7 +325,7 @@ fun DishDetailContent(
                     }
 
                     Text(
-                        text = state.quantity.toString(),
+                        text = quantity.toString(), // Recibe 'quantity'
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -270,7 +357,7 @@ fun DishDetailContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "$${String.format("%.2f", dish.price * state.quantity)}",
+                        text = "$${String.format("%.2f", dish.price * quantity)}", // Recibe 'dish' y 'quantity'
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -307,5 +394,68 @@ fun DishDetailContent(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+
+/**
+ * 4. PREVIEWS FUNCIONALES
+ */
+
+// Datos de prueba
+private val previewDish = Dish(
+    id = "d1",
+    name = "Platillo de Prueba",
+    description = "Esta es una descripción larga y detallada del platillo para que ocupe un poco de espacio en el preview y se vea realista.",
+    price = 25.99,
+    imageURL = "https://placehold.co/600x400/png" // No importa para el preview
+)
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado Principal (Contenido)")
+@Composable
+fun DishDetailScreenContentPreview_Content() {
+    ServyAppTheme {
+        DishDetailScreenContent(
+            state = DishDetailState(dish = previewDish, quantity = 2, isLoading = false),
+            snackbarHostState = remember { SnackbarHostState() },
+            onBackClick = {},
+            onCartClick = {},
+            onIncrementQuantity = {},
+            onDecrementQuantity = {},
+            onAddToCart = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado de Carga")
+@Composable
+fun DishDetailScreenContentPreview_Loading() {
+    ServyAppTheme {
+        DishDetailScreenContent(
+            state = DishDetailState(isLoading = true),
+            snackbarHostState = remember { SnackbarHostState() },
+            onBackClick = {},
+            onCartClick = {},
+            onIncrementQuantity = {},
+            onDecrementQuantity = {},
+            onAddToCart = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado de Error de Carga")
+@Composable
+fun DishDetailScreenContentPreview_Error() {
+    ServyAppTheme {
+        DishDetailScreenContent(
+            // El error de carga se da si el platillo es null Y hay un mensaje de error
+            state = DishDetailState(isLoading = false, dish = null, errorMessage = "No se pudo cargar el platillo."),
+            snackbarHostState = remember { SnackbarHostState() },
+            onBackClick = {},
+            onCartClick = {},
+            onIncrementQuantity = {},
+            onDecrementQuantity = {},
+            onAddToCart = {}
+        )
     }
 }

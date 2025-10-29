@@ -12,16 +12,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,7 +36,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.servyapp.ui.theme.ServyAppTheme
 
 @Composable
 fun ProfileScreen(
@@ -119,7 +121,7 @@ fun ProfileContent(
                     label = "Correo",
                     value = email
                 )
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 ProfileInfoRow(
                     icon = Icons.Default.Phone,
                     label = "Teléfono",
@@ -148,7 +150,7 @@ fun ProfileContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                Icons.Default.ExitToApp,
+                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                 contentDescription = "Logout",
                 tint = MaterialTheme.colorScheme.error
             )
@@ -188,5 +190,18 @@ fun ProfileInfoRow(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun ProfileScreenPreview() {
+    ServyAppTheme {
+        ProfileContent(
+            email = "hola@test.com",
+            phone = "123456789",
+            onLogout = {},
+            onEditProfile = {}
+        )
     }
 }

@@ -13,35 +13,36 @@ import javax.inject.Singleton
 class PedidoRepository @Inject constructor(
     private val pedidoRemoteDataSource: PedidoRemoteDataSource
 ) {
-    suspend fun createOrder(restaurantId: String, order: Order): Result<String> =
-        pedidoRemoteDataSource.createOrder(restaurantId, order)
+    suspend fun createOrder(order: Order, restaurantId: String): Result<String> =
+        pedidoRemoteDataSource.createOrder(order, restaurantId)
 
-    suspend fun getActiveOrder(restaurantId: String, userId: String): Result<Order?> =
-        pedidoRemoteDataSource.getActiveOrder(restaurantId, userId)
+    fun getUserOrders(userId: String, restaurantId: String): Flow<Result<List<Order>>> =
+        pedidoRemoteDataSource.getUserOrders(userId, restaurantId)
 
-    fun getUserOrders(restaurantId: String, userId: String): Flow<Result<List<Order>>> =
-        pedidoRemoteDataSource.getUserOrders(restaurantId, userId)
+    suspend fun getOrderById(orderId: String, restaurantId: String): Result<Order> =
+        pedidoRemoteDataSource.getOrderById(orderId, restaurantId)
 
-    suspend fun getOrderById(restaurantId: String, orderId: String): Result<Order> =
-        pedidoRemoteDataSource.getOrderById(restaurantId, orderId)
+    suspend fun updateOrderStatus(orderId: String, status: OrderStatus, restaurantId: String): Result<Unit> =
+        pedidoRemoteDataSource.updateOrderStatus(orderId, status, restaurantId)
 
-    suspend fun updateOrderStatus(restaurantId: String, orderId: String, status: OrderStatus): Result<Unit> =
-        pedidoRemoteDataSource.updateOrderStatus(restaurantId, orderId, status)
+    suspend fun addPedidoToOrder(orderId: String, pedido: Pedido, restaurantId: String): Result<Unit> =
+        pedidoRemoteDataSource.addPedidoToOrder(orderId, pedido, restaurantId)
 
-    suspend fun addPedidoToOrder(restaurantId: String, orderId: String, pedido: Pedido): Result<Unit> =
-        pedidoRemoteDataSource.addPedidoToOrder(restaurantId, orderId, pedido)
+    suspend fun removePedidoFromOrder(orderId: String, pedidoId: String, restaurantId: String): Result<Unit> =
+        pedidoRemoteDataSource.removePedidoFromOrder(orderId, pedidoId, restaurantId)
 
-    suspend fun removePedidoFromOrder(restaurantId: String, orderId: String, pedidoId: String): Result<Unit> =
-        pedidoRemoteDataSource.removePedidoFromOrder(restaurantId, orderId, pedidoId)
+    suspend fun updatePedidoStatus(orderId: String, pedidoId: String, status: PedidoStatus, restaurantId: String): Result<Unit> =
+        pedidoRemoteDataSource.updatePedidoStatus(orderId, pedidoId, status, restaurantId)
 
-    suspend fun updatePedidoStatus(
-        restaurantId: String,
+    suspend fun updatePedidoItemQuantity(
         orderId: String,
         pedidoId: String,
-        status: PedidoStatus
+        dishId: String,
+        newQuantity: Int,
+        restaurantId: String
     ): Result<Unit> =
-        pedidoRemoteDataSource.updatePedidoStatus(restaurantId, orderId, pedidoId, status)
+        pedidoRemoteDataSource.updatePedidoItemQuantity(orderId, pedidoId, dishId, newQuantity, restaurantId)
 
-    suspend fun deleteOrder(restaurantId: String, orderId: String): Result<Unit> =
-        pedidoRemoteDataSource.deleteOrder(restaurantId, orderId)
+    suspend fun deleteOrder(orderId: String, restaurantId: String): Result<Unit> =
+        pedidoRemoteDataSource.deleteOrder(orderId, restaurantId)
 }

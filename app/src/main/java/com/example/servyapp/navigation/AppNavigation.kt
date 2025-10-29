@@ -21,6 +21,8 @@ import com.example.servyapp.ui.login.LoginViewModel
 import com.example.servyapp.ui.orders.OrdersScreen
 import com.example.servyapp.ui.dishdetail.DishDetailViewModel
 import com.example.servyapp.ui.dishdetail.DishDetailScreen
+import com.example.servyapp.ui.orderdetail.OrderDetailScreen
+import com.example.servyapp.ui.orderdetail.OrderDetailViewModel
 import com.example.servyapp.ui.profile.ProfileScreen
 import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
@@ -45,6 +47,12 @@ sealed class Screen(val route: String){
     }
     object Cart: Screen("cart")
     object Orders: Screen("orders")
+
+    object OrderDetail : Screen("orderDetail/{orderId}") {
+        fun createRoute(orderId: String): String {
+            return "orderDetail/$orderId"
+        }
+    }
 }
 
 @Composable
@@ -237,5 +245,22 @@ fun AppNavigation(
                 }
             )
         }
+
+        composable(
+            route = Screen.OrderDetail.route,
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            val orderDetailViewModel: OrderDetailViewModel = hiltViewModel()
+
+            OrderDetailScreen(
+                orderId = orderId,
+                viewModel = orderDetailViewModel,
+                onBackClick = { navHostController.popBackStack() }
+            )
+        }
+
     }
 }

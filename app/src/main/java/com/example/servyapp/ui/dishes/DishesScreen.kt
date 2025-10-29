@@ -34,20 +34,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.servyapp.domain.model.Dish
+import com.example.servyapp.ui.theme.ServyAppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 1. CONTENEDOR (State-Holder)
+ *
+ * Se encarga de la lógica: obtener el ViewModel, manejar
+ * los eventos de navegación y recolectar el estado.
+ */
 @Composable
 fun DishesScreen(
-    dishesViewModel: DishesViewModel,
+    dishesViewModel: DishesViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onCartClick: () -> Unit,
     onNavigateToDetail: (restaurantId: String, dishId: String) -> Unit
 ) {
     val state by dishesViewModel.uiState.collectAsState()
 
+    // El LaunchedEffect para la navegación se queda en el contenedor
     LaunchedEffect(state.navigatetoDishDetails) {
         when (val event = state.navigatetoDishDetails) {
             is NavigationEvent.NavigateToDetail -> {
@@ -58,7 +67,32 @@ fun DishesScreen(
         }
     }
 
+    // Llamamos al Composable de UI (Contenido)
+    DishesContent(
+        state = state,
+        onBackClick = onBackClick,
+        onCartClick = onCartClick,
+        onDishClick = { dishesViewModel.onDishClick(it) }
+    )
+}
+
+/**
+ * 2. CONTENIDO (Stateless)
+ *
+ * Se encarga SOLO de la UI. Recibe el estado y las lambdas
+ * para notificar eventos.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DishesContent(
+    state: DishesState,
+    onBackClick: () -> Unit,
+    onCartClick: () -> Unit,
+    onDishClick: (Dish) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -83,6 +117,7 @@ fun DishesScreen(
             )
         }
     ) { innerPadding ->
+        // El `when` ahora vive en el Composable de Contenido
         when {
             state.isLoading -> {
                 Box(
@@ -133,7 +168,7 @@ fun DishesScreen(
                     items(state.dishes) { dish ->
                         DishItem(
                             dish = dish,
-                            onDishClick = { dishesViewModel.onDishClick(it) }
+                            onDishClick = { onDishClick(it) } // Se pasa la lambda
                         )
                     }
                 }
@@ -142,6 +177,9 @@ fun DishesScreen(
     }
 }
 
+/**
+ * Este Composable ya era stateless, así que no necesita cambios.
+ */
 @Composable
 fun DishItem(
     dish: Dish,
@@ -189,5 +227,79 @@ fun DishItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * 3. PREVIEWS FUNCIONALES
+ *
+ * Creamos vistas previas para los diferentes estados de DishesContent.
+ */
+
+// Datos de prueba para los Previews
+private val previewDishes = listOf(
+    Dish(
+        id = "1",
+        name = "Hamburguesa Clásica",
+        price = 15.99,
+        imageURL = "https://example.com/image.png" // Se usará un placeholder
+    ),
+    Dish(
+        id = "2",
+        name = "Pizza Pepperoni",
+        price = 22.50,
+        imageURL = "https://example.com/image.png"
+    )
+)
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado con Platillos")
+@Composable
+fun DishesContentPreview_WithDishes() {
+    ServyAppTheme {
+        DishesContent(
+            state = DishesState(dishes = previewDishes, isLoading = false),
+            onBackClick = {},
+            onCartClick = {},
+            onDishClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado Vacío")
+@Composable
+fun DishesContentPreview_Empty() {
+    ServyAppTheme {
+        DishesContent(
+            state = DishesState(dishes = emptyList(), isLoading = false),
+            onBackClick = {},
+            onCartClick = {},
+            onDishClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado de Carga")
+@Composable
+fun DishesContentPreview_Loading() {
+    ServyAppTheme {
+        DishesContent(
+            state = DishesState(isLoading = true),
+            onBackClick = {},
+            onCartClick = {},
+            onDishClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Estado de Error")
+@Composable
+fun DishesContentPreview_Error() {
+    ServyAppTheme {
+        DishesContent(
+            state = DishesState(errorMessage = "Error al cargar el menú.", isLoading = false),
+            onBackClick = {},
+            onCartClick = {},
+            onDishClick = {}
+        )
     }
 }

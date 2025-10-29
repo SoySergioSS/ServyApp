@@ -83,11 +83,11 @@ class CartViewModel @Inject constructor(
 
     fun onPedidoClick() {
         if (_uiState.value.items.isNotEmpty()) {
-            createOrAddToOrder()
+            createOrder()
         }
     }
 
-    private fun createOrAddToOrder() {
+    private fun createOrder() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
@@ -106,24 +106,63 @@ class CartViewModel @Inject constructor(
                 val cartItems = _uiState.value.items
                 if (cartItems.isEmpty()) return@launch
 
-                // Obtener el restaurantId del primer item del carrito
-                val restaurantId = cartItems.first().restaurantId
+                val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
 
-                // Verificar si existe una orden activa
-                val activeOrderResult = pedidoRepository.getActiveOrder(restaurantId, currentUser.uid)
+                val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
+                    val pedidoItems = items.map { cartItem ->
+                        PedidoItem(
+                            dishId = cartItem.dish.id,
+                            dishName = cartItem.dish.name,
+                            dishImageURL = cartItem.dish.imageURL,
+                            dishDescription = cartItem.dish.description,
+                            quantity = cartItem.quantity,
+                            pricePerUnit = cartItem.dish.price,
+                            totalPrice = cartItem.totalPrice
+                        )
+                    }
 
-                activeOrderResult.fold(
-                    onSuccess = { existingOrder ->
-                        if (existingOrder != null) {
-                            addPedidosToExistingOrder(restaurantId, existingOrder, cartItems)
-                        } else {
-                            createNewOrder(restaurantId, currentUser.uid, cartItems)
+                    val subtotal = pedidoItems.sumOf { it.totalPrice }
+
+                    // TODO: Obtener el nombre real del restaurante
+                    val restaurantName = "Restaurante $restaurantId"
+
+                    Pedido(
+                        restaurantId = restaurantId,
+                        restaurantName = restaurantName,
+                        items = pedidoItems,
+                        subtotal = subtotal,
+                        createdAt = Timestamp.now(),
+                        status = PedidoStatus.PENDING
+                    )
+                }
+
+                val totalAmount = pedidos.sumOf { it.subtotal }
+                val orderNumber = generateOrderNumber()
+
+                val order = Order(
+                    userId = currentUser.uid,
+                    createdAt = Timestamp.now(),
+                    orderNumber = orderNumber,
+                    pedidos = pedidos,
+                    totalAmount = totalAmount,
+                    status = OrderStatus.PENDING
+                )
+
+                pedidoRepository.createOrder(order, cartItems.first().restaurantId).fold(
+                    onSuccess = {
+                        clearCart()
+
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                navigationEvent = NavigationEvent.NavigateToOrders
+                            )
                         }
                     },
                     onFailure = { exception ->
                         _uiState.update {
                             it.copy(
-                                errorMessage = "Error al verificar orden: ${exception.message}",
+                                errorMessage = "Error al crear la orden: ${exception.message}",
                                 isLoading = false
                             )
                         }
@@ -138,120 +177,6 @@ class CartViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private suspend fun createNewOrder(restaurantId: String, userId: String, cartItems: List<CartItem>) {
-        // Agrupar items por restaurante (cada restaurante = 1 Pedido)
-        val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
-
-        // Crear los Pedidos
-        val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
-            createPedidoFromCartItems(restaurantId, items)
-        }
-
-        val totalAmount = pedidos.sumOf { it.subtotal }
-        val orderNumber = generateOrderNumber()
-
-        val order = Order(
-            userId = userId,
-            createdAt = Timestamp.now(),
-            orderNumber = orderNumber,
-            pedidos = pedidos,
-            totalAmount = totalAmount,
-            status = OrderStatus.PENDING
-        )
-
-        pedidoRepository.createOrder(restaurantId, order).fold(
-            onSuccess = {
-                clearCart()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        navigationEvent = NavigationEvent.NavigateToOrders
-                    )
-                }
-            },
-            onFailure = { exception ->
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "Error al crear la orden: ${exception.message}",
-                        isLoading = false
-                    )
-                }
-            }
-        )
-    }
-
-    private suspend fun addPedidosToExistingOrder(restaurantId: String, order: Order, cartItems: List<CartItem>) {
-        // Agrupar items por restaurante
-        val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
-
-        var allPedidosAdded = true
-
-        // Agregar cada pedido a la orden existente
-        for ((restaurantId, items) in itemsByRestaurant) {
-            val newPedido = createPedidoFromCartItems(restaurantId, items)
-
-            for ((_, items) in itemsByRestaurant) {
-                val newPedido = createPedidoFromCartItems(restaurantId, items)
-
-                pedidoRepository.addPedidoToOrder(restaurantId, order.id, newPedido).fold(
-                    onSuccess = {
-                        // Pedido agregado exitosamente
-                    },
-                    onFailure = { exception ->
-                        allPedidosAdded = false
-                        _uiState.update {
-                            it.copy(
-                                errorMessage = "Error al agregar pedido: ${exception.message}",
-                                isLoading = false
-                            )
-                        }
-                        return
-                    }
-                )
-            }
-
-
-        }
-
-        if (allPedidosAdded) {
-            clearCart()
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    navigationEvent = NavigationEvent.NavigateToOrders
-                )
-            }
-        }
-    }
-
-    private fun createPedidoFromCartItems(restaurantId: String, items: List<CartItem>): Pedido {
-        val pedidoItems = items.map { cartItem ->
-            PedidoItem(
-                dishId = cartItem.dish.id,
-                dishName = cartItem.dish.name,
-                dishImageURL = cartItem.dish.imageURL,
-                dishDescription = cartItem.dish.description,
-                quantity = cartItem.quantity,
-                pricePerUnit = cartItem.dish.price,
-                totalPrice = cartItem.totalPrice
-            )
-        }
-
-        val subtotal = pedidoItems.sumOf { it.totalPrice }
-
-        // TODO: Obtener el nombre real del restaurante
-        val restaurantName = "Restaurante $restaurantId"
-
-        return Pedido(
-            restaurantId = restaurantId,
-            restaurantName = restaurantName,
-            items = pedidoItems,
-            subtotal = subtotal,
-            createdAt = Timestamp.now(),
-            status = PedidoStatus.PENDING
-        )
     }
 
     private fun generateOrderNumber(): String {
