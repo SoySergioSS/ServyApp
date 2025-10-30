@@ -65,16 +65,18 @@ class OrderDetailViewModel @Inject constructor(
 
     fun completeOrder() = updateStatus(OrderStatus.COMPLETED, "Pago registrado correctamente")
 
-    fun handleCashPayment(orderId: String, restaurantId: String) {
+    fun handleCashPayment(orderId: String) {
         viewModelScope.launch {
+            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
             pedidoRepository.updatePaymentMethod(orderId, "Efectivo", restaurantId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED,restaurantId)
             reloadOrder(orderId, restaurantId)
         }
     }
 
-    fun handleYapePayment(orderId: String, restaurantId: String) {
+    fun handleYapePayment(orderId: String) {
         viewModelScope.launch {
+            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
             pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", restaurantId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
             reloadOrder(orderId, restaurantId)

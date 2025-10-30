@@ -83,7 +83,13 @@ fun OrderDetailScreen(
                         order = order,
                         onConfirm = { viewModel.confirmOrder() },
                         onCancel = { viewModel.cancelOrder() },
-                        onPay = { viewModel.handleCardPayment(order.id) },
+                        onPay = { method ->
+                            when (method) {
+                                PaymentMethod.CASH -> viewModel.handleCashPayment(order.id)
+                                PaymentMethod.YAPE -> viewModel.handleYapePayment(order.id)
+                                PaymentMethod.CARD -> viewModel.handleCardPayment(order.id)
+                            }
+                        },
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
@@ -92,13 +98,15 @@ fun OrderDetailScreen(
     }
 }
 
-
+enum class PaymentMethod {
+    CASH, YAPE, CARD
+}
 @Composable
 fun OrderDetailContent(
     order: com.example.servyapp.domain.model.Order,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
-    onPay: () -> Unit,
+    onPay: (PaymentMethod) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
@@ -191,15 +199,15 @@ fun OrderDetailContent(
                 onDismiss = { showPaymentDialog = false },
                 onCash = {
                     showPaymentDialog = false
-                    onPay() // o una función específica si quieres diferenciar
+                    onPay(PaymentMethod.CASH) // o una función específica si quieres diferenciar
                 },
                 onYape = {
                     showPaymentDialog = false
-                    onPay()
+                    onPay(PaymentMethod.YAPE)
                 },
                 onCard = {
                     showPaymentDialog = false
-                    onPay()
+                    onPay(PaymentMethod.CARD)
                 }
             )
         }
@@ -238,7 +246,7 @@ fun OrderDetailScreenContent(
     onBackClick: () -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
-    onPay: () -> Unit,
+    onPay: (PaymentMethod) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(

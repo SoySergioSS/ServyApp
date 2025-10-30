@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.util.copy
 import com.example.servyapp.data.repository.AuthRepository
+import com.example.servyapp.domain.model.Card
 import com.example.servyapp.domain.useCase.SignupUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -156,4 +157,6 @@ class SignupViewModel @Inject constructor(
     fun resetNavigateToSignup() {
         _uiState.value = _uiState.value.copy(navigateToSignup = false)
     }
+
+
 }
