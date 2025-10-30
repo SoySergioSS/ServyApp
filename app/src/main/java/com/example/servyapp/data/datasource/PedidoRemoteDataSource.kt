@@ -240,4 +240,10 @@ class PedidoRemoteDataSource @Inject constructor(
     private fun generatePedidoId(): String {
         return "pedido_${System.currentTimeMillis()}_${(0..9999).random()}"
     }
+
+    suspend fun updatePaymentMethod(orderId: String, method: String, restaurantId: String) {
+        ordersCollection(restaurantId).document(orderId)
+            .update("paymentMethod", method)
+            .await()
+    }
 }

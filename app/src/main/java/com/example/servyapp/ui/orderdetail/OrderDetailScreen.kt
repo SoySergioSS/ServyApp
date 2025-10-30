@@ -75,7 +75,7 @@ fun OrderDetailScreen(
                         order = order,
                         onConfirm = { viewModel.confirmOrder() },
                         onCancel = { viewModel.cancelOrder() },
-                        onPay = { viewModel.completeOrder() },
+                        onPay = { viewModel.handleCardPayment(order.id) },
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
@@ -94,6 +94,7 @@ fun OrderDetailContent(
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    var showPaymentDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -162,7 +163,10 @@ fun OrderDetailContent(
             }
 
             OrderStatus.IN_PROGRESS -> {
-                Button(onClick = onPay, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { showPaymentDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Pagar")
                 }
             }
@@ -174,10 +178,48 @@ fun OrderDetailContent(
                 )
             }
         }
+        if (showPaymentDialog) {
+            PaymentDialog(
+                onDismiss = { showPaymentDialog = false },
+                onCash = {
+                    showPaymentDialog = false
+                    onPay() // o una función específica si quieres diferenciar
+                },
+                onYape = {
+                    showPaymentDialog = false
+                    onPay()
+                },
+                onCard = {
+                    showPaymentDialog = false
+                    onPay()
+                }
+            )
+        }
     }
 
 }
 
+@Composable
+fun PaymentDialog(
+    onDismiss: () -> Unit,
+    onCash: () -> Unit,
+    onYape: () -> Unit,
+    onCard: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Selecciona un método de pago") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onCash, modifier = Modifier.fillMaxWidth()) { Text("Efectivo") }
+                Button(onClick = onYape, modifier = Modifier.fillMaxWidth()) { Text("Yape / Plin") }
+                Button(onClick = onCard, modifier = Modifier.fillMaxWidth()) { Text("Tarjeta") }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {}
+    )
+}
 
 
 // --- Previews para OrderDetailScreen  ---
@@ -257,6 +299,7 @@ fun OrderDetailScreenContent(
         }
     }
 }
+
 
 /* ----------------------------
    Datos de prueba para preview

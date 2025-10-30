@@ -45,4 +45,7 @@ class PedidoRepository @Inject constructor(
 
     suspend fun deleteOrder(orderId: String, restaurantId: String): Result<Unit> =
         pedidoRemoteDataSource.deleteOrder(orderId, restaurantId)
+
+    suspend fun updatePaymentMethod(orderId: String, method: String, restaurantId: String) =
+        pedidoRemoteDataSource.updatePaymentMethod(orderId, method, restaurantId)
 }

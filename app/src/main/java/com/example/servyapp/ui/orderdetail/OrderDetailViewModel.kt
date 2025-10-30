@@ -4,7 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servyapp.data.manager.SessionManager
+import com.example.servyapp.data.repository.CardRepository
 import com.example.servyapp.data.repository.PedidoRepository
+import com.example.servyapp.data.repository.UserRepository
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +19,9 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val cardRepository: CardRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrderDetailState())
@@ -60,6 +64,49 @@ class OrderDetailViewModel @Inject constructor(
     fun cancelOrder() = updateStatus(OrderStatus.CANCELLED, "Pedido cancelado correctamente")
 
     fun completeOrder() = updateStatus(OrderStatus.COMPLETED, "Pago registrado correctamente")
+
+    fun handleCashPayment(orderId: String, restaurantId: String) {
+        viewModelScope.launch {
+            pedidoRepository.updatePaymentMethod(orderId, "Efectivo", restaurantId)
+            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED,restaurantId)
+            reloadOrder(orderId, restaurantId)
+        }
+    }
+
+    fun handleYapePayment(orderId: String, restaurantId: String) {
+        viewModelScope.launch {
+            pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", restaurantId)
+            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
+            reloadOrder(orderId, restaurantId)
+        }
+    }
+
+    fun handleCardPayment(orderId: String) {
+        viewModelScope.launch {
+            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
+            val userId = userRepository.getCurrentUserId()
+            val card = userId?.let { cardRepository.getCard(it) }
+
+            if (card != null) {
+                pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", restaurantId)
+                pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
+                reloadOrder(orderId, restaurantId)
+            } else {
+                //_uiState.update {
+                    //it.copy(navigationEvent = NavigationEvent.NavigateToCardForm)
+                //}
+            }
+        }
+    }
+
+    private suspend fun reloadOrder(orderId: String, restaurantId: String) {
+        val result = pedidoRepository.getOrderById(orderId, restaurantId)
+        result.onSuccess { updatedOrder ->
+            _uiState.update { it.copy(order = updatedOrder) }
+        }.onFailure { error ->
+            _uiState.update { it.copy(errorMessage = error.message ?: "Error al recargar el pedido") }
+        }
+    }
 
     /**
      * Actualiza el estado del pedido en Firebase.
