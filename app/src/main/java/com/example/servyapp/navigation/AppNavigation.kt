@@ -240,8 +240,8 @@ fun AppNavigation(
                 onBackClick = {
                     navHostController.popBackStack()
                 },
-                onNavigateToOrderDetail = {
-                    navHostController.navigate(Screen.OrderDetail.route)
+                onNavigateToOrderDetail = { orderId ->
+                    navHostController.navigate(Screen.OrderDetail.createRoute(orderId))
                 }
             )
         }

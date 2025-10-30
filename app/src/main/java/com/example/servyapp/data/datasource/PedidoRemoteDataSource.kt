@@ -57,6 +57,8 @@ class PedidoRemoteDataSource @Inject constructor(
     suspend fun getOrderById(orderId: String, restaurantId: String): Result<Order> {
         return try {
             val snapshot = ordersCollection(restaurantId).document(orderId).get().await()
+            Log.d("OrderDebug", "Snapshot existe: ${snapshot.exists()}")
+            Log.d("OrderDebug", "Datos brutos: ${snapshot.data}")
             val order = snapshot.toObject(Order::class.java)?.copy(id = snapshot.id)
             if (order != null) {
                 Result.success(order)
