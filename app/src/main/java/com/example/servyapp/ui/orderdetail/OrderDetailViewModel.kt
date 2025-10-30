@@ -90,13 +90,19 @@ class OrderDetailViewModel @Inject constructor(
             if (card != null) {
                 pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", restaurantId)
                 pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
+                _uiState.update {
+                    it.copy(successMessage = "Pago completado con tarjeta")
+                }
                 reloadOrder(orderId, restaurantId)
             } else {
-                //_uiState.update {
-                    //it.copy(navigationEvent = NavigationEvent.NavigateToCardForm)
-                //}
+
+                _uiState.update { it.copy(navigateToCard = true) }
             }
         }
+    }
+
+    fun navigationToCardComplete() {
+        _uiState.update { it.copy(navigateToCard = false) }
     }
 
     private suspend fun reloadOrder(orderId: String, restaurantId: String) {

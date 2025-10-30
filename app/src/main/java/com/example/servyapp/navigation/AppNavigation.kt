@@ -258,7 +258,10 @@ fun AppNavigation(
             OrderDetailScreen(
                 orderId = orderId,
                 viewModel = orderDetailViewModel,
-                onBackClick = { navHostController.popBackStack() }
+                onBackClick = { navHostController.popBackStack() },
+                onNavigateToCard = {
+                    navHostController.navigate(Screen.Card.route)
+                }
             )
         }
 

@@ -8,6 +8,6 @@ data class OrderDetailState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
-    val navigationEvent: NavigationEvent? = null
+    val navigateToCard: Boolean = false
 )
 

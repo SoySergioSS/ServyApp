@@ -34,12 +34,20 @@ import java.util.Date
 fun OrderDetailScreen(
     orderId: String,
     viewModel: OrderDetailViewModel = hiltViewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToCard: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(orderId) {
         viewModel.loadOrderById(orderId)
+    }
+
+    LaunchedEffect(state.navigateToCard) {
+        if (state.navigateToCard) {
+            onNavigateToCard()
+            viewModel.navigationToCardComplete()
+        }
     }
 
     Scaffold(
@@ -84,7 +92,7 @@ fun OrderDetailScreen(
     }
 }
 
-// ✅ Mueve esta función AQUÍ, fuera de OrderDetailScreen
+
 @Composable
 fun OrderDetailContent(
     order: com.example.servyapp.domain.model.Order,
