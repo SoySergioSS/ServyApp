@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.servyapp.domain.model.CartItem
 import com.example.servyapp.domain.model.Dish
@@ -64,16 +63,16 @@ import com.example.servyapp.ui.theme.ServyAppTheme
  * Se encarga de la lógica: obtener el ViewModel, manejar
  * los eventos de navegación y recolectar el estado.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    viewModel: CartViewModel = hiltViewModel(),
+    viewModel: CartViewModel,
     onBackClick: () -> Unit,
     onNavigateToOrders: () -> Unit,
     onNavigateToDishDetail: (restaurantId: String, dishId: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // La lógica de navegación se queda en el contenedor
     LaunchedEffect(state.navigationEvent) {
         when (val event = state.navigationEvent) {
             is NavigationEvent.NavigateToOrders -> {
@@ -88,17 +87,90 @@ fun CartScreen(
         }
     }
 
-    // Llamamos al Composable de UI (Contenido)
-    CartScreenContent(
-        state = state,
-        onBackClick = onBackClick,
-        onIncrementQuantity = { viewModel.incrementQuantity(it) },
-        onDecrementQuantity = { viewModel.decrementQuantity(it) },
-        onDeleteItem = { viewModel.showDeleteDialog(it) },
-        onItemClick = { viewModel.onItemClick(it) },
-        onPedidoClick = { viewModel.onPedidoClick() },
-        onConfirmDelete = { viewModel.confirmDeleteItem() },
-        onDismissDelete = { viewModel.dismissDeleteDialog() }
+    // ✅ Diálogo de eliminación
+    if (state.showDeleteDialog != null) {
+        DeleteConfirmationDialog(
+            itemName = state.showDeleteDialog!!.dish.name,
+            onConfirm = { viewModel.confirmDeleteItem() },
+            onDismiss = { viewModel.dismissDeleteDialog() }
+        )
+    }
+
+    // ✅ Diálogo de conflicto de restaurantes
+    if (state.showConflictDialog) {
+        RestaurantConflictDialog(
+            errorMessage = state.errorMessage ?: "Ya tienes una orden activa en otro restaurante",
+            onDismiss = { viewModel.dismissConflictDialog() }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Carrito de Compras")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        if (state.isEmpty) {
+            EmptyCartContent(
+                modifier = Modifier.padding(innerPadding)
+            )
+        } else {
+            CartContent(
+                state = state,
+                onIncrementQuantity = { viewModel.incrementQuantity(it) },
+                onDecrementQuantity = { viewModel.decrementQuantity(it) },
+                onDeleteItem = { viewModel.showDeleteDialog(it) },
+                onItemClick = { viewModel.onItemClick(it) },
+                onPedidoClick = { viewModel.onPedidoClick() },
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
+    }
+}
+
+// ✅ Nuevo diálogo para conflictos de restaurante
+@Composable
+fun RestaurantConflictDialog(
+    errorMessage: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.ShoppingCart,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = {
+            Text(
+                text = "Orden en progreso",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Entendido")
+            }
+        }
     )
 }
 

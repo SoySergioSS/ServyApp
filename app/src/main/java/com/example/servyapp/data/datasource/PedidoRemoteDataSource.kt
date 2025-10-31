@@ -18,13 +18,12 @@ import javax.inject.Singleton
 class PedidoRemoteDataSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
-    //private val ordersCollection = firestore.collection("orders")
-    private fun ordersCollection(restaurantId: String) =
-        firestore.collection("restaurants").document(restaurantId).collection("orders")
+    private fun ordersCollection(userId: String) =
+        firestore.collection("users").document(userId).collection("orders")
 
-    suspend fun createOrder(order: Order, restaurantId: String): Result<String> {
+    suspend fun createOrder(userId: String, order: Order): Result<String> {
         return try {
-            val docRef = ordersCollection(restaurantId).document()
+            val docRef = ordersCollection(userId).document()
             val orderWithId = order.copy(id = docRef.id)
             docRef.set(orderWithId).await()
             Result.success(docRef.id)
@@ -33,9 +32,27 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    fun getUserOrders(userId: String, restaurantId: String): Flow<Result<List<Order>>> = callbackFlow {
-        val listenerRegistration = ordersCollection(restaurantId)
-            .whereEqualTo("userId", userId)
+    suspend fun getActiveOrder(userId: String): Result<Order?> {
+        return try {
+            val snapshot = ordersCollection(userId)
+                .whereIn("status", listOf(OrderStatus.PENDING.name, OrderStatus.IN_PROGRESS.name))
+                .orderBy("created_at", Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .await()
+
+            val order = snapshot.documents.firstOrNull()?.let { doc ->
+                doc.toObject(Order::class.java)?.copy(id = doc.id)
+            }
+
+            Result.success(order)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getUserOrders(userId: String): Flow<Result<List<Order>>> = callbackFlow {
+        val listenerRegistration = ordersCollection(userId)
             .orderBy("created_at", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -54,9 +71,9 @@ class PedidoRemoteDataSource @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
-    suspend fun getOrderById(orderId: String, restaurantId: String): Result<Order> {
+    suspend fun getOrderById(orderId: String, userId: String): Result<Order> {
         return try {
-            val snapshot = ordersCollection(restaurantId).document(orderId).get().await()
+            val snapshot = ordersCollection(userId).document(orderId).get().await()
             Log.d("OrderDebug", "Snapshot existe: ${snapshot.exists()}")
             Log.d("OrderDebug", "Datos brutos: ${snapshot.data}")
             val order = snapshot.toObject(Order::class.java)?.copy(id = snapshot.id)
@@ -70,9 +87,9 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun updateOrderStatus(orderId: String, status: OrderStatus, restaurantId: String): Result<Unit> {
+    suspend fun updateOrderStatus(userId: String, orderId: String, status: OrderStatus): Result<Unit> {
         return try {
-            ordersCollection(restaurantId).document(orderId)
+            ordersCollection(userId).document(orderId)
                 .update("status", status.name)
                 .await()
             Result.success(Unit)
@@ -81,9 +98,9 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun addPedidoToOrder(orderId: String, pedido: Pedido, restaurantId: String): Result<Unit> {
+    suspend fun addPedidoToOrder(userId: String, orderId: String, pedido: Pedido): Result<Unit> {
         return try {
-            val orderDoc = ordersCollection(restaurantId).document(orderId)
+            val orderDoc = ordersCollection(userId).document(orderId)
             val snapshot = orderDoc.get().await()
             val order = snapshot.toObject(Order::class.java)
 
@@ -108,9 +125,9 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun removePedidoFromOrder(orderId: String, pedidoId: String, restaurantId: String): Result<Unit> {
+    suspend fun removePedidoFromOrder(orderId: String, pedidoId: String, userId: String): Result<Unit> {
         return try {
-            val orderDoc = ordersCollection(restaurantId).document(orderId)
+            val orderDoc = ordersCollection(userId).document(orderId)
             val snapshot = orderDoc.get().await()
             val order = snapshot.toObject(Order::class.java)
 
@@ -118,7 +135,6 @@ class PedidoRemoteDataSource @Inject constructor(
                 val updatedPedidos = order.pedidos.filter { it.id != pedidoId }
                 val newTotal = updatedPedidos.sumOf { it.subtotal }
 
-                // Si no quedan pedidos, cambiar estado de la orden
                 val newStatus = if (updatedPedidos.isEmpty()) {
                     OrderStatus.PENDING
                 } else {
@@ -141,9 +157,9 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun updatePedidoStatus(orderId: String, pedidoId: String, status: PedidoStatus, restaurantId: String): Result<Unit> {
+    suspend fun updatePedidoStatus(userId: String, orderId: String, pedidoId: String, status: PedidoStatus): Result<Unit> {
         return try {
-            val orderDoc = ordersCollection(restaurantId).document(orderId)
+            val orderDoc = ordersCollection(userId).document(orderId)
             val snapshot = orderDoc.get().await()
             val order = snapshot.toObject(Order::class.java)
 
@@ -156,7 +172,6 @@ class PedidoRemoteDataSource @Inject constructor(
                     }
                 }
 
-                // Actualizar estado de la orden según los pedidos
                 val allCompleted = updatedPedidos.all { it.status == PedidoStatus.DELIVERED }
                 val newOrderStatus = if (allCompleted) {
                     OrderStatus.COMPLETED
@@ -180,14 +195,14 @@ class PedidoRemoteDataSource @Inject constructor(
     }
 
     suspend fun updatePedidoItemQuantity(
+        userId: String,
         orderId: String,
         pedidoId: String,
         dishId: String,
-        newQuantity: Int,
-        restaurantId: String
+        newQuantity: Int
     ): Result<Unit> {
         return try {
-            val orderDoc = ordersCollection(restaurantId).document(orderId)
+            val orderDoc = ordersCollection(userId).document(orderId)
             val snapshot = orderDoc.get().await()
             val order = snapshot.toObject(Order::class.java)
 
@@ -228,22 +243,22 @@ class PedidoRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun deleteOrder(orderId: String, restaurantId: String): Result<Unit> {
+    suspend fun deleteOrder(orderId: String, userId: String): Result<Unit> {
         return try {
-            ordersCollection(restaurantId).document(orderId).delete().await()
+            ordersCollection(userId).document(orderId).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private fun generatePedidoId(): String {
-        return "pedido_${System.currentTimeMillis()}_${(0..9999).random()}"
-    }
-
-    suspend fun updatePaymentMethod(orderId: String, method: String, restaurantId: String) {
-        ordersCollection(restaurantId).document(orderId)
+    suspend fun updatePaymentMethod(orderId: String, method: String, userId: String) {
+        ordersCollection(userId).document(orderId)
             .update("paymentMethod", method)
             .await()
+    }
+
+    private fun generatePedidoId(): String {
+        return "pedido_${System.currentTimeMillis()}_${(0..9999).random()}"
     }
 }

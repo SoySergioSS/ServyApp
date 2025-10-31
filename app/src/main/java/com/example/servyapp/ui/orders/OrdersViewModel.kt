@@ -52,7 +52,7 @@ class OrdersViewModel @Inject constructor(
                 return@launch
             }
 
-            pedidoRepository.getUserOrders(currentUser.uid, restaurantId).collectLatest { result ->
+            pedidoRepository.getUserOrders(currentUser.uid).collectLatest { result ->
                     result.fold(onSuccess = { orders ->
                         _uiState.update {
                             it.copy(

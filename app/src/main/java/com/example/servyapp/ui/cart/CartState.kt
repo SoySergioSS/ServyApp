@@ -7,6 +7,8 @@ data class CartState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val showDeleteDialog: CartItem? = null,
+    val showConflictDialog: Boolean = false,
+    val conflictingRestaurants: List<String> = emptyList(),
     val navigationEvent: NavigationEvent? = null
 ) {
     val subtotal: Double

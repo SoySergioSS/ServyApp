@@ -3,12 +3,10 @@ package com.example.servyapp.ui.orderdetail
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.servyapp.data.manager.SessionManager
 import com.example.servyapp.data.repository.CardRepository
 import com.example.servyapp.data.repository.PedidoRepository
-import com.example.servyapp.data.repository.UserRepository
-import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,9 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
-    private val sessionManager: SessionManager,
     private val cardRepository: CardRepository,
-    private val userRepository: UserRepository
+    private val auth: FirebaseAuth // ✅ Usar auth en lugar de UserRepository y SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrderDetailState())
@@ -32,20 +29,20 @@ class OrderDetailViewModel @Inject constructor(
      */
     fun loadOrderById(orderId: String) {
         viewModelScope.launch {
-            val restaurantId = sessionManager.selectedRestaurantId.value
-            Log.d("OrderDebug", "Intentando cargar orden: $orderId")
-            Log.d("OrderDebug", "Restaurant ID actual: $restaurantId")
-
-            if (restaurantId == null) {
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
                 _uiState.update {
-                    it.copy(errorMessage = "Restaurante no seleccionado", isLoading = false)
+                    it.copy(errorMessage = "Usuario no autenticado", isLoading = false)
                 }
                 return@launch
             }
 
+            Log.d("OrderDebug", "Intentando cargar orden: $orderId")
+            Log.d("OrderDebug", "User ID: ${currentUser.uid}")
+
             _uiState.update { it.copy(isLoading = true) }
 
-            val result = pedidoRepository.getOrderById(orderId, restaurantId)
+            val result = pedidoRepository.getOrderById(orderId, currentUser.uid)
             result.fold(
                 onSuccess = { order ->
                     Log.d("OrderDebug", "Orden encontrada: ${order.id}")
@@ -67,37 +64,46 @@ class OrderDetailViewModel @Inject constructor(
 
     fun handleCashPayment(orderId: String) {
         viewModelScope.launch {
-            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
-            pedidoRepository.updatePaymentMethod(orderId, "Efectivo", restaurantId)
-            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED,restaurantId)
-            reloadOrder(orderId, restaurantId)
+            val userId = auth.currentUser?.uid ?: return@launch
+
+            pedidoRepository.updatePaymentMethod(orderId, "Efectivo", userId)
+            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
+            reloadOrder(orderId, userId)
+
+            _uiState.update {
+                it.copy(successMessage = "Pago completado en efectivo")
+            }
         }
     }
 
     fun handleYapePayment(orderId: String) {
         viewModelScope.launch {
-            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
-            pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", restaurantId)
-            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
-            reloadOrder(orderId, restaurantId)
+            val userId = auth.currentUser?.uid ?: return@launch
+
+            pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", userId)
+            pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
+            reloadOrder(orderId, userId)
+
+            _uiState.update {
+                it.copy(successMessage = "Pago completado con Yape/Plin")
+            }
         }
     }
 
     fun handleCardPayment(orderId: String) {
         viewModelScope.launch {
-            val restaurantId = userRepository.getSelectedRestaurantId().value ?: return@launch
-            val userId = userRepository.getCurrentUserId()
-            val card = userId?.let { cardRepository.getCard(it) }
+            val userId = auth.currentUser?.uid ?: return@launch
+            val card = cardRepository.getCard(userId)
 
             if (card != null) {
-                pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", restaurantId)
-                pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, restaurantId)
+                pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", userId)
+                pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
+                reloadOrder(orderId, userId)
+
                 _uiState.update {
                     it.copy(successMessage = "Pago completado con tarjeta")
                 }
-                reloadOrder(orderId, restaurantId)
             } else {
-
                 _uiState.update { it.copy(navigateToCard = true) }
             }
         }
@@ -107,8 +113,8 @@ class OrderDetailViewModel @Inject constructor(
         _uiState.update { it.copy(navigateToCard = false) }
     }
 
-    private suspend fun reloadOrder(orderId: String, restaurantId: String) {
-        val result = pedidoRepository.getOrderById(orderId, restaurantId)
+    private suspend fun reloadOrder(orderId: String, userId: String) {
+        val result = pedidoRepository.getOrderById(orderId, userId)
         result.onSuccess { updatedOrder ->
             _uiState.update { it.copy(order = updatedOrder) }
         }.onFailure { error ->
@@ -122,17 +128,18 @@ class OrderDetailViewModel @Inject constructor(
     private fun updateStatus(newStatus: OrderStatus, successMessage: String) {
         viewModelScope.launch {
             val order = _uiState.value.order ?: return@launch
-            val restaurantId = sessionManager.selectedRestaurantId.value
-            if (restaurantId == null) {
+            val userId = auth.currentUser?.uid
+
+            if (userId == null) {
                 _uiState.update {
-                    it.copy(errorMessage = "Restaurante no seleccionado", isLoading = false)
+                    it.copy(errorMessage = "Usuario no autenticado", isLoading = false)
                 }
                 return@launch
             }
 
             _uiState.update { it.copy(isLoading = true) }
 
-            val result = pedidoRepository.updateOrderStatus(order.id, newStatus, restaurantId)
+            val result = pedidoRepository.updateOrderStatus(order.id, newStatus, userId)
             result.fold(
                 onSuccess = {
                     _uiState.update {
@@ -148,5 +155,9 @@ class OrderDetailViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    fun clearMessages() {
+        _uiState.update { it.copy(successMessage = null, errorMessage = null) }
     }
 }
