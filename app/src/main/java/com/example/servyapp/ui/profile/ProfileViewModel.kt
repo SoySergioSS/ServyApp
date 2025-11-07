@@ -40,13 +40,102 @@ class ProfileViewModel @Inject constructor(
                     it.copy(
                         phone = user.phone,
                         email = user.email,
-
                     )
                 }
             }
         }
 
         _uiState.update { it.copy(isLoading = false) }
+    }
+
+    fun showEditDialog() {
+        _uiState.update { it.copy(showEditDialog = true, errorMessage = null, updateSuccess = false) }
+    }
+
+    fun dismissEditDialog() {
+        _uiState.update { it.copy(showEditDialog = false, errorMessage = null, updateSuccess = false) }
+    }
+
+    fun updateProfile(phone: String, newPassword: String?, currentPassword: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdating = true, errorMessage = null) }
+
+            try {
+                val uid = authRepository.currentUser?.uid
+                if (uid == null) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Usuario no autenticado",
+                            isUpdating = false
+                        )
+                    }
+                    return@launch
+                }
+
+                // Actualizar teléfono si cambió
+                val currentPhone = _uiState.value.phone
+                if (phone != currentPhone && phone.isNotBlank()) {
+                    userRepository.updateUserPhone(uid, phone)
+                    _uiState.update { it.copy(phone = phone) }
+                }
+
+                // Actualizar contraseña si se proporcionó
+                if (!newPassword.isNullOrBlank()) {
+                    if (currentPassword.isNullOrBlank()) {
+                        _uiState.update {
+                            it.copy(
+                                errorMessage = "Debes ingresar tu contraseña actual para cambiarla",
+                                isUpdating = false
+                            )
+                        }
+                        return@launch
+                    }
+
+                    if (newPassword.length < 6) {
+                        _uiState.update {
+                            it.copy(
+                                errorMessage = "La nueva contraseña debe tener al menos 6 caracteres",
+                                isUpdating = false
+                            )
+                        }
+                        return@launch
+                    }
+
+                    // Reautenticar usuario antes de cambiar contraseña
+                    try {
+                        authRepository.reauthenticateUser(currentPassword)
+                        // Si la reautenticación es exitosa, cambiar la contraseña
+                        authRepository.updatePassword(newPassword)
+                    } catch (e: Exception) {
+                        _uiState.update {
+                            it.copy(
+                                errorMessage = "Contraseña actual incorrecta",
+                                isUpdating = false
+                            )
+                        }
+                        return@launch
+                    }
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isUpdating = false,
+                        updateSuccess = true,
+                        showEditDialog = false
+                    )
+                }
+
+                // Recargar perfil para asegurar datos actualizados
+                loadUserProfile()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Error al actualizar: ${e.message}",
+                        isUpdating = false
+                    )
+                }
+            }
+        }
     }
 
     fun logout(){
