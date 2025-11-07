@@ -1,5 +1,6 @@
 package com.example.servyapp.navigation
 
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -10,9 +11,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.servyapp.ui.cart.CartScreen
 import com.example.servyapp.ui.cart.CartViewModel
+import com.example.servyapp.ui.components.BottomNavigationBar
 import com.example.servyapp.ui.dishes.DishesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
@@ -61,12 +64,40 @@ fun AppNavigation(
     modifier: Modifier = Modifier
 ){
     val signupViewModel: SignupViewModel = hiltViewModel()
+    val navBackStackEntry by navHostController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    
+    // Determinar si mostrar la barra de navegación inferior
+    val showBottomBar = currentRoute in listOf(
+        Screen.Home.route,
+        Screen.Orders.route,
+        Screen.Profile.route
+    )
 
-    NavHost(
-        navController = navHostController,
-        startDestination = Screen.Splash.route,
-        modifier = modifier
-    ){
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                BottomNavigationBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { route ->
+                        navHostController.navigate(route) {
+                            // Evitar múltiples copias de la misma ruta en el back stack
+                            popUpTo(navHostController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navHostController,
+            startDestination = Screen.Splash.route,
+            modifier = modifier
+        ){
         composable(route = Screen.Splash.route){
             SplashScreen(
                 navigateToHome = {
@@ -223,7 +254,12 @@ fun AppNavigation(
             CartScreen(
                 viewModel = cartViewModel,
                 onBackClick = {
-                    navHostController.popBackStack()
+                    // Si hay una ruta anterior, volver; si no, ir a Home
+                    if (!navHostController.popBackStack()) {
+                        navHostController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
                 },
                 onNavigateToOrders = {
                     navHostController.navigate(Screen.Orders.route)
@@ -238,7 +274,12 @@ fun AppNavigation(
             OrdersScreen(
                 viewModel = hiltViewModel(),
                 onBackClick = {
-                    navHostController.popBackStack()
+                    // Si hay una ruta anterior, volver; si no, ir a Home
+                    if (!navHostController.popBackStack()) {
+                        navHostController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
                 },
                 onNavigateToOrderDetail = { orderId ->
                     navHostController.navigate(Screen.OrderDetail.createRoute(orderId))
@@ -265,5 +306,6 @@ fun AppNavigation(
             )
         }
 
+        }
     }
 }
