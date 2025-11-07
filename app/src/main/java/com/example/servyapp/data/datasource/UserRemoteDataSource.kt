@@ -32,5 +32,11 @@ class UserRemoteDataSource @Inject constructor(
             .toObject(User::class.java)
     }
 
+    suspend fun updateUserPhone(uid: String, phone: String) {
+        firestore.collection("users")
+            .document(uid)
+            .update("phone", phone)
+            .await()
+    }
 
 }

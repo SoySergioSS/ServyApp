@@ -81,14 +81,6 @@ fun HomeScreenContent(
                     Text(
                         "Restaurantes"
                     )
-                },
-                actions = {
-                    IconButton(onClick = onProfileClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_launcher_background), //TODO: Cambiar por el icono de profile
-                            contentDescription = "Ir a Perfil"
-                        )
-                    }
                 }
             )
         }

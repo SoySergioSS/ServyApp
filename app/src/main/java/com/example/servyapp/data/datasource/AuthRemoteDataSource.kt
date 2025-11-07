@@ -29,5 +29,23 @@ class AuthRemoteDataSource @Inject constructor (
         auth.sendPasswordResetEmail(email).await()
     }
 
+    suspend fun updatePassword(newPassword: String) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.updatePassword(newPassword).await()
+        } else {
+            throw Exception("Usuario no autenticado")
+        }
+    }
+
+    suspend fun reauthenticateUser(password: String) {
+        val user = auth.currentUser
+        if (user != null && user.email != null) {
+            val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(user.email!!, password)
+            user.reauthenticate(credential).await()
+        } else {
+            throw Exception("Usuario no autenticado")
+        }
+    }
 
 }

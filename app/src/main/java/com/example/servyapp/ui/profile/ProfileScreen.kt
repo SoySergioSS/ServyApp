@@ -17,27 +17,40 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.servyapp.ui.theme.ServyAppTheme
 
 @Composable
@@ -46,6 +59,13 @@ fun ProfileScreen(
     logoutButtonPressed: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // Mostrar mensaje de éxito
+    LaunchedEffect(state.updateSuccess) {
+        if (state.updateSuccess) {
+            // El diálogo se cierra automáticamente, pero podrías mostrar un snackbar aquí
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -68,9 +88,22 @@ fun ProfileScreen(
                     logoutButtonPressed()
                 },
                 onEditProfile = {
-                    // Aquí puedes añadir la lógica para editar el perfil
+                    viewModel.showEditDialog()
                 }
             )
+
+            // Diálogo de edición
+            if (state.showEditDialog) {
+                EditProfileDialog(
+                    currentPhone = state.phone,
+                    isUpdating = state.isUpdating,
+                    errorMessage = state.errorMessage,
+                    onDismiss = { viewModel.dismissEditDialog() },
+                    onSave = { phone, newPassword, currentPassword ->
+                        viewModel.updateProfile(phone, newPassword, currentPassword)
+                    }
+                )
+            }
         }
     }
 }
@@ -85,7 +118,9 @@ fun ProfileContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp)
+            .padding(bottom = 88.dp), // Padding extra para la barra de navegación inferior
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
@@ -151,11 +186,11 @@ fun ProfileContent(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                contentDescription = "Logout",
+                contentDescription = "Cerrar sesión",
                 tint = MaterialTheme.colorScheme.error
             )
             Spacer(Modifier.width(8.dp))
-            Text("Logout", color = MaterialTheme.colorScheme.error)
+            Text("Cerrar sesión", color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -189,6 +224,182 @@ fun ProfileInfoRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
+        }
+    }
+}
+
+@Composable
+fun EditProfileDialog(
+    currentPhone: String,
+    isUpdating: Boolean,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onSave: (phone: String, newPassword: String?, currentPassword: String?) -> Unit
+) {
+    var phone by remember { mutableStateOf(currentPhone) }
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var showCurrentPassword by remember { mutableStateOf(false) }
+    var showNewPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = { if (!isUpdating) onDismiss() }) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Cambiar datos",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Campo de teléfono
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Teléfono") },
+                    singleLine = true,
+                    enabled = !isUpdating,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                Text(
+                    text = "Cambiar contraseña (opcional)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Contraseña actual
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Contraseña actual") },
+                    singleLine = true,
+                    enabled = !isUpdating,
+                    visualTransformation = if (showCurrentPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) {
+                            Icon(
+                                imageVector = if (showCurrentPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showCurrentPassword) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    }
+                )
+
+                // Nueva contraseña
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("Nueva contraseña") },
+                    singleLine = true,
+                    enabled = !isUpdating,
+                    visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { showNewPassword = !showNewPassword }) {
+                            Icon(
+                                imageVector = if (showNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showNewPassword) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    }
+                )
+
+                // Confirmar nueva contraseña
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirmar nueva contraseña") },
+                    singleLine = true,
+                    enabled = !isUpdating,
+                    visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
+                            Icon(
+                                imageVector = if (showConfirmPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (showConfirmPassword) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    }
+                )
+
+                // Mensaje de error
+                val displayError = localErrorMessage ?: errorMessage
+                if (displayError != null) {
+                    Text(
+                        text = displayError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start
+                    )
+                }
+
+                // Botones
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isUpdating,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancelar")
+                    }
+
+                    Button(
+                        onClick = {
+                            localErrorMessage = null
+                            
+                            // Validaciones locales
+                            if (newPassword.isNotBlank()) {
+                                if (currentPassword.isBlank()) {
+                                    localErrorMessage = "Debes ingresar tu contraseña actual"
+                                    return@Button
+                                }
+                                if (newPassword.length < 6) {
+                                    localErrorMessage = "La nueva contraseña debe tener al menos 6 caracteres"
+                                    return@Button
+                                }
+                                if (newPassword != confirmPassword) {
+                                    localErrorMessage = "Las contraseñas no coinciden"
+                                    return@Button
+                                }
+                            }
+                            
+                            val passwordToSave = if (newPassword.isNotBlank()) newPassword else null
+                            val currentPasswordToSave = if (newPassword.isNotBlank()) currentPassword else null
+                            onSave(phone, passwordToSave, currentPasswordToSave)
+                        },
+                        enabled = !isUpdating,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (isUpdating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Guardar")
+                        }
+                    }
+                }
+            }
         }
     }
 }

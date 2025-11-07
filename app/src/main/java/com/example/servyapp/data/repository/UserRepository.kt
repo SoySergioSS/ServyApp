@@ -39,4 +39,8 @@ class UserRepository @Inject constructor(
         val uid = authRemoteDataSource.currentUser?.uid ?: return null
         return userRemoteDataSource.getUserProfile(uid)
     }
+
+    suspend fun updateUserPhone(uid: String, phone: String) {
+        userRemoteDataSource.updateUserPhone(uid, phone)
+    }
 }

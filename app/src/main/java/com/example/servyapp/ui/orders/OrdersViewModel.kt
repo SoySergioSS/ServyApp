@@ -2,7 +2,6 @@ package com.example.servyapp.ui.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.servyapp.data.manager.SessionManager
 import com.example.servyapp.data.repository.PedidoRepository
 import com.example.servyapp.domain.model.Order
 import com.google.firebase.auth.FirebaseAuth
@@ -17,7 +16,6 @@ import javax.inject.Inject
 @HiltViewModel
 class OrdersViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
-    private val sessionManager: SessionManager,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -42,16 +40,7 @@ class OrdersViewModel @Inject constructor(
 
             _uiState.update { it.copy(isLoading = true) }
 
-            val restaurantId = sessionManager.selectedRestaurantId.value
-            if (restaurantId == null) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "Restaurante no seleccionado", isLoading = false
-                    )
-                }
-                return@launch
-            }
-
+            // Las órdenes se obtienen por usuario, no por restaurante
             pedidoRepository.getUserOrders(currentUser.uid).collectLatest { result ->
                     result.fold(onSuccess = { orders ->
                         _uiState.update {
