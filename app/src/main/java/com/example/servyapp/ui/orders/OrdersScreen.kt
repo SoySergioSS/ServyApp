@@ -313,7 +313,6 @@ fun OrderCard(
             // Lista resumida de pedidos
             order.pedidos.take(3).forEach { pedido ->
                 PedidoSummaryItem(
-                    restaurantName = pedido.restaurantName,
                     itemCount = pedido.items.size,
                     totalItems = pedido.items.sumOf { it.quantity },
                     subtotal = pedido.subtotal
@@ -379,7 +378,6 @@ fun OrderCard(
 
 @Composable
 fun PedidoSummaryItem(
-    restaurantName: String,
     itemCount: Int,
     totalItems: Int,
     subtotal: Double
@@ -388,7 +386,6 @@ fun PedidoSummaryItem(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Ícono de restaurante
         Box(
             modifier = Modifier
                 .size(32.dp)
@@ -406,21 +403,14 @@ fun PedidoSummaryItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Información del pedido
         Column(
             modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = restaurantName,
+        ) {Text(
+                text = "$itemCount platillo(s) • $totalItems item(s)",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
                 color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "$itemCount platillo(s) • $totalItems item(s)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -499,8 +489,7 @@ fun OrdersContentPreview_WithOrders() {
         pedidos = listOf(
             Pedido(
                 id = "p1",
-                restaurantName = "Restaurante Famoso",
-                items = emptyList(), // No necesitamos items para este preview
+                items = emptyList(),
                 subtotal = 150.50
             )
         )

@@ -18,7 +18,7 @@ import javax.inject.Inject
 class OrderDetailViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
     private val cardRepository: CardRepository,
-    private val auth: FirebaseAuth // ✅ Usar auth en lugar de UserRepository y SessionManager
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrderDetailState())
@@ -56,7 +56,7 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun confirmOrder() = updateStatus(OrderStatus.IN_PROGRESS, "Pedido confirmado correctamente")
+    fun confirmOrder() = updateStatus(OrderStatus.IN_PROGRESS, "Pedido confirmado correctamente") //cambiar esto por scanear QR
 
     fun cancelOrder() = updateStatus(OrderStatus.CANCELLED, "Pedido cancelado correctamente")
 
@@ -159,5 +159,44 @@ class OrderDetailViewModel @Inject constructor(
 
     fun clearMessages() {
         _uiState.update { it.copy(successMessage = null, errorMessage = null) }
+    }
+
+    fun cancelPedido(pedidoId: String) {
+        viewModelScope.launch {
+            val order = _uiState.value.order ?: return@launch
+            val userId = auth.currentUser?.uid
+
+            if (userId == null) {
+                _uiState.update { it.copy(errorMessage = "Usuario no autenticado", isLoading = false) }
+                return@launch
+            }
+
+            _uiState.update { it.copy(isLoading = true) }
+
+            // Usamos la función del repositorio que modificamos
+            val result = pedidoRepository.removePedidoFromOrder(order.id, pedidoId, userId)
+
+            result.fold(
+                onSuccess = {
+                    // Recargamos la orden para obtener el estado actualizado
+                    // (ya que la orden completa podría haberse cancelado)
+                    reloadOrder(order.id, userId)
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Pedido eliminado de la orden",
+                            isLoading = false
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Error al eliminar pedido: ${e.message}",
+                            isLoading = false
+                        )
+                    }
+                }
+            )
+        }
     }
 }
