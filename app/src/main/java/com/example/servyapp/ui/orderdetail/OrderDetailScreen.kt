@@ -1,8 +1,10 @@
 package com.example.servyapp.ui.orderdetail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -110,6 +113,9 @@ fun OrderDetailScreen(
                                 PaymentMethod.CARD -> viewModel.handleCardPayment(order.id)
                             }
                         },
+                        onCancelPedido = { pedidoId -> // <-- AÑADE ESTA LÍNEA
+                            viewModel.cancelPedido(pedidoId)
+                        },
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
@@ -127,35 +133,45 @@ fun OrderDetailContent(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
+    onCancelPedido: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showPaymentDialog by remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
+            .fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
     ) {
-        Text(
-            "N° Pedido: ${order.orderNumber}",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text("Fecha: ${dateFormat.format(order.createdAt.toDate())}")
-        Text("Estado: ${order.status}", fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(16.dp))
 
-        Divider()
+        item {
+            Text(
+                "N° Pedido: ${order.orderNumber}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text("Fecha: ${dateFormat.format(order.createdAt.toDate())}")
+            Text("Estado: ${order.status}", fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(16.dp))
 
-        Spacer(Modifier.height(8.dp))
-        Text("Productos:", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
+            Divider()
+            Spacer(Modifier.height(8.dp))
+            Text("Productos:", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+        }
 
-        // 👇 Mostrar todos los pedidos y sus items
-        order.pedidos.forEach { pedido ->
-            LazyColumn {
-                items(pedido.items) { item ->
+        items(
+            items = order.pedidos,
+            key = { it.id }
+        ) { pedido ->
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp)
+            ) {
+                pedido.items.forEach { item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -173,61 +189,83 @@ fun OrderDetailContent(
 
             Spacer(Modifier.height(8.dp))
             Text("Subtotal: S/ ${pedido.subtotal}", fontWeight = FontWeight.Medium)
+
+            // El botón para cancelar el pedido individual
+            if (order.status == OrderStatus.PENDING) {
+                OutlinedButton(
+                    onClick = { onCancelPedido(pedido.id) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cancelar este Pedido")
+                }
+            }
             Spacer(Modifier.height(16.dp))
         }
 
-        Divider()
-        Spacer(Modifier.height(8.dp))
-        Text("Total: S/ ${order.totalAmount}", fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(32.dp))
+        item {
+            Divider()
+            Spacer(Modifier.height(8.dp))
+            Text("Total: S/ ${order.totalAmount}", fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(32.dp))
 
-        when (order.status) {
-            OrderStatus.PENDING -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onConfirm, modifier = Modifier.weight(1f)) {
-                        Text("Confirmar")
+            when (order.status) {
+                OrderStatus.PENDING -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onConfirm, modifier = Modifier.weight(1f)) {
+                            Text("Confirmar")
+                        }
+                        OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                            Text("Cancelar")
+                        }
                     }
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text("Cancelar")
+                }
+
+                OrderStatus.IN_PROGRESS -> {
+                    Button(
+                        onClick = { showPaymentDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Pagar")
+                    }
+                }
+
+                else -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Pedido ${order.status}"
+                        )
                     }
                 }
             }
-
-            OrderStatus.IN_PROGRESS -> {
-                Button(
-                    onClick = { showPaymentDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Pagar")
-                }
-            }
-
-            else -> {
-                Text(
-                    "Pedido ${order.status}",
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
-        }
-        if (showPaymentDialog) {
-            PaymentDialog(
-                onDismiss = { showPaymentDialog = false },
-                onCash = {
-                    showPaymentDialog = false
-                    onPay(PaymentMethod.CASH) // o una función específica si quieres diferenciar
-                },
-                onYape = {
-                    showPaymentDialog = false
-                    onPay(PaymentMethod.YAPE)
-                },
-                onCard = {
-                    showPaymentDialog = false
-                    onPay(PaymentMethod.CARD)
-                }
-            )
         }
     }
 
+        if (showPaymentDialog) {
+        PaymentDialog(
+            onDismiss = { showPaymentDialog = false },
+            onCash = {
+                showPaymentDialog = false
+                onPay(PaymentMethod.CASH)
+            },
+            onYape = {
+                showPaymentDialog = false
+                onPay(PaymentMethod.YAPE)
+            },
+            onCard = {
+                showPaymentDialog = false
+                onPay(PaymentMethod.CARD)
+            }
+        )
+    }
 }
 
 @Composable
@@ -262,6 +300,7 @@ fun OrderDetailScreenContent(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
+    onCancelPedido: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -313,6 +352,7 @@ fun OrderDetailScreenContent(
                     onConfirm = onConfirm,
                     onCancel = onCancel,
                     onPay = onPay,
+                    onCancelPedido = onCancelPedido,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -402,7 +442,8 @@ fun OrderDetailScreenContentPreview_Content() {
             onBackClick = {},
             onConfirm = {},
             onCancel = {},
-            onPay = {}
+            onPay = {},
+            onCancelPedido = {}
         )
     }
 }
@@ -416,7 +457,8 @@ fun OrderDetailScreenContentPreview_Loading() {
             onBackClick = {},
             onConfirm = {},
             onCancel = {},
-            onPay = {}
+            onPay = {},
+            onCancelPedido = {}
         )
     }
 }
@@ -430,7 +472,8 @@ fun OrderDetailScreenContentPreview_Error() {
             onBackClick = {},
             onConfirm = {},
             onCancel = {},
-            onPay = {}
+            onPay = {},
+            onCancelPedido = {}
         )
     }
 }

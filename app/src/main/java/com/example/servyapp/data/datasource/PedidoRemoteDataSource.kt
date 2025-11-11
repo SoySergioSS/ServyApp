@@ -112,8 +112,7 @@ class PedidoRemoteDataSource @Inject constructor(
                 orderDoc.update(
                     mapOf(
                         "pedidos" to updatedPedidos,
-                        "totalAmount" to newTotal,
-                        "status" to OrderStatus.IN_PROGRESS.name
+                        "totalAmount" to newTotal
                     )
                 ).await()
                 Result.success(Unit)
@@ -136,7 +135,7 @@ class PedidoRemoteDataSource @Inject constructor(
                 val newTotal = updatedPedidos.sumOf { it.subtotal }
 
                 val newStatus = if (updatedPedidos.isEmpty()) {
-                    OrderStatus.PENDING
+                    OrderStatus.CANCELLED
                 } else {
                     order.status
                 }
