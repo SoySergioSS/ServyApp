@@ -56,7 +56,44 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun confirmOrder() = updateStatus(OrderStatus.IN_PROGRESS, "Pedido confirmado correctamente") //cambiar esto por scanear QR
+    fun validateQrAndConfirmOrder(scannedContent: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+
+            val order = _uiState.value.order
+            val userId = auth.currentUser?.uid
+
+            // 1. Validaciones básicas
+            if (order == null || userId == null) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "No se pudo verificar la orden.") }
+                return@launch
+            }
+            if (scannedContent.isNullOrBlank()) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "QR inválido o vacío.") }
+                return@launch
+            }
+
+            // 2. Se extrae el ID del restaurante del QR
+            val prefix = "https://servy.app/checkin/"
+            val scannedRestaurantId = if (scannedContent.startsWith(prefix)) {
+                scannedContent.removePrefix(prefix)
+            } else {
+                null // El QR no tiene el formato esperado
+            }
+
+            // 3. Obtiene el id del restaurante de la orden actual
+             val orderRestaurantId = order.pedidos.firstOrNull()?.restaurantId
+
+            // 4. Compara los IDs
+            if (scannedRestaurantId != null && scannedRestaurantId == orderRestaurantId) {
+                // coincide
+                updateStatus(OrderStatus.IN_PROGRESS, "¡Orden confirmada exitosamente!")
+            } else {
+                // no coincide
+                _uiState.update { it.copy(isLoading = false, errorMessage = "QR Incorrecto. Esta orden no pertenece a este restaurante.") }
+            }
+        }
+    }
 
     fun cancelOrder() = updateStatus(OrderStatus.CANCELLED, "Pedido cancelado correctamente")
 

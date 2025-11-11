@@ -1,5 +1,6 @@
 package com.example.servyapp.ui.orderdetail
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -49,6 +52,8 @@ import com.example.servyapp.domain.model.PedidoItem
 import com.example.servyapp.domain.model.PedidoStatus
 import com.example.servyapp.ui.theme.ServyAppTheme
 import com.google.firebase.Timestamp
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -62,6 +67,16 @@ fun OrderDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val qrScannerLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        if (result.contents != null) {
+            viewModel.validateQrAndConfirmOrder(result.contents)
+        } else {
+            viewModel.clearMessages()
+        }
+    }
+
     LaunchedEffect(orderId) {
         viewModel.loadOrderById(orderId)
     }
@@ -70,6 +85,22 @@ fun OrderDetailScreen(
         if (state.navigateToCard) {
             onNavigateToCard()
             viewModel.navigationToCardComplete()
+        }
+    }
+
+
+    LaunchedEffect(state.errorMessage) {
+        val errorMessage = state.errorMessage
+        if (errorMessage != null) {
+            snackbarHostState.showSnackbar(errorMessage)
+            viewModel.clearMessages()
+        }
+    }
+    LaunchedEffect(state.successMessage) {
+        val successMessage = state.successMessage
+        if (successMessage != null) {
+            snackbarHostState.showSnackbar(successMessage)
+            viewModel.clearMessages()
         }
     }
 
@@ -83,42 +114,53 @@ fun OrderDetailScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
+
+        val order = state.order
+        val errorMessage = state.errorMessage
+        val isLoading = state.isLoading
+
         when {
-            state.isLoading -> Box(
+            isLoading -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
 
-            state.errorMessage != null -> Box(
+            errorMessage != null && order == null -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = state.errorMessage ?: "Error desconocido")
+                Text(text = errorMessage)
             }
 
-            state.order != null -> {
-                state.order?.let { order ->
-                    OrderDetailContent(
-                        order = order,
-                        onConfirm = { viewModel.confirmOrder() },
-                        onCancel = { viewModel.cancelOrder() },
-                        onPay = { method ->
-                            when (method) {
-                                PaymentMethod.CASH -> viewModel.handleCashPayment(order.id)
-                                PaymentMethod.YAPE -> viewModel.handleYapePayment(order.id)
-                                PaymentMethod.CARD -> viewModel.handleCardPayment(order.id)
-                            }
-                        },
-                        onCancelPedido = { pedidoId -> // <-- AÑADE ESTA LÍNEA
-                            viewModel.cancelPedido(pedidoId)
-                        },
-                        modifier = Modifier.padding(paddingValues)
-                    )
-                }
+            order != null -> {
+
+                OrderDetailContent(
+                    order = order,
+                    onConfirm = {
+                        val options = ScanOptions()
+                        options.setPrompt("Escanea el QR del restaurante")
+                        options.setBeepEnabled(true)
+                        options.setOrientationLocked(false)
+                        qrScannerLauncher.launch(options)
+                    },
+                    onCancel = { viewModel.cancelOrder() },
+                    onPay = { method ->
+                        when (method) {
+                            PaymentMethod.CASH -> viewModel.handleCashPayment(order.id)
+                            PaymentMethod.YAPE -> viewModel.handleYapePayment(order.id)
+                            PaymentMethod.CARD -> viewModel.handleCardPayment(order.id)
+                        }
+                    },
+                    onCancelPedido = { pedidoId ->
+                        viewModel.cancelPedido(pedidoId)
+                    },
+                    modifier = Modifier.padding(paddingValues)
+                )
             }
         }
     }
@@ -346,7 +388,6 @@ fun OrderDetailScreenContent(
             }
 
             state.order != null -> {
-                // Reutiliza tu OrderDetailContent existente (ya maneja lazy column internamente)
                 OrderDetailContent(
                     order = state.order,
                     onConfirm = onConfirm,
