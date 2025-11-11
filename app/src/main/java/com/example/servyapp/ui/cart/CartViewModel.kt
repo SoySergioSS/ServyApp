@@ -174,7 +174,7 @@ class CartViewModel @Inject constructor(
         }
 
         val pedidos = itemsByRestaurant.map { (id, items) ->
-            createPedidoFromCartItems(id, items, restaurantName)
+            createPedidoFromCartItems(id, items)
         }
 
         val totalAmount = pedidos.sumOf { it.subtotal }
@@ -184,7 +184,7 @@ class CartViewModel @Inject constructor(
         val order = Order(
             userId = userId,
             createdAt = Timestamp.now(),
-            orderNumber = orderNumber, // <-- Usar el nuevo número
+            orderNumber = orderNumber,
             pedidos = pedidos,
             totalAmount = totalAmount,
             status = OrderStatus.PENDING
@@ -222,13 +222,7 @@ class CartViewModel @Inject constructor(
 
         for ((restaurantId, items) in itemsByRestaurant) {
 
-            val restaurantName = try {
-                restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
-            } catch (e: Exception) {
-                "Restaurante" // Nombre por defecto en caso de error
-            }
-
-            val newPedido = createPedidoFromCartItems(restaurantId, items, restaurantName)
+            val newPedido = createPedidoFromCartItems(restaurantId, items)
 
 
             pedidoRepository.addPedidoToOrder(order.id, newPedido, userId).fold(
@@ -261,8 +255,7 @@ class CartViewModel @Inject constructor(
 
     private fun createPedidoFromCartItems(
         restaurantId: String,
-        items: List<CartItem>,
-        restaurantName: String
+        items: List<CartItem>
     ): Pedido {
         val pedidoItems = items.map { cartItem ->
             PedidoItem(
@@ -280,7 +273,6 @@ class CartViewModel @Inject constructor(
 
         return Pedido(
             restaurantId = restaurantId,
-            restaurantName = restaurantName,
             items = pedidoItems,
             subtotal = subtotal,
             createdAt = Timestamp.now(),
