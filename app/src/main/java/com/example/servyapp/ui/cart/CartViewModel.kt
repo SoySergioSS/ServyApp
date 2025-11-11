@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.servyapp.data.manager.CartManager
 import com.example.servyapp.data.repository.PedidoRepository
+import com.example.servyapp.data.repository.RestaurantRepository
 import com.example.servyapp.domain.model.CartItem
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
@@ -24,7 +25,8 @@ import javax.inject.Inject
 class CartViewModel @Inject constructor(
     private val cartManager: CartManager,
     private val pedidoRepository: PedidoRepository,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val restaurantRepository: RestaurantRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CartState())
@@ -106,25 +108,20 @@ class CartViewModel @Inject constructor(
                 val cartItems = _uiState.value.items
                 if (cartItems.isEmpty()) return@launch
 
-                // ✅ Obtener los restaurantes del carrito actual
                 val currentCartRestaurants = cartItems.map { it.restaurantId }.distinct()
 
-                // ✅ Verificar si existe una orden activa
                 val activeOrderResult = pedidoRepository.getActiveOrder(currentUser.uid)
 
                 activeOrderResult.fold(
                     onSuccess = { existingOrder ->
                         if (existingOrder != null) {
-                            // ✅ Hay una orden activa, verificar restaurantes
                             val orderRestaurants = existingOrder.pedidos.map { it.restaurantId }.distinct()
 
-                            // ✅ Verificar si hay conflicto de restaurantes
                             val hasConflict = currentCartRestaurants.any { cartRestaurant ->
                                 !orderRestaurants.contains(cartRestaurant)
                             }
 
                             if (hasConflict) {
-                                // ❌ Intenta agregar pedidos de restaurantes diferentes
                                 val conflictRestaurants = currentCartRestaurants.filterNot {
                                     orderRestaurants.contains(it)
                                 }
@@ -139,11 +136,9 @@ class CartViewModel @Inject constructor(
                                     )
                                 }
                             } else {
-                                // ✅ Los restaurantes son compatibles, agregar pedidos
                                 addPedidosToExistingOrder(currentUser.uid, existingOrder, cartItems)
                             }
                         } else {
-                            // ✅ No hay orden activa, crear nueva
                             createNewOrder(currentUser.uid, cartItems)
                         }
                     },
@@ -170,17 +165,26 @@ class CartViewModel @Inject constructor(
     private suspend fun createNewOrder(userId: String, cartItems: List<CartItem>) {
         val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
 
-        val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
-            createPedidoFromCartItems(restaurantId, items)
+        val restaurantId = cartItems.first().restaurantId
+
+        val restaurantName = try {
+            restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
+        } catch (e: Exception) {
+            "Restaurante" //por defecto en caso de error
+        }
+
+        val pedidos = itemsByRestaurant.map { (id, items) ->
+            createPedidoFromCartItems(id, items, restaurantName)
         }
 
         val totalAmount = pedidos.sumOf { it.subtotal }
-        val orderNumber = generateOrderNumber()
+
+        val orderNumber = generateOrderNumber(restaurantName)
 
         val order = Order(
             userId = userId,
             createdAt = Timestamp.now(),
-            orderNumber = orderNumber,
+            orderNumber = orderNumber, // <-- Usar el nuevo número
             pedidos = pedidos,
             totalAmount = totalAmount,
             status = OrderStatus.PENDING
@@ -217,7 +221,15 @@ class CartViewModel @Inject constructor(
         var allPedidosAdded = true
 
         for ((restaurantId, items) in itemsByRestaurant) {
-            val newPedido = createPedidoFromCartItems(restaurantId, items)
+
+            val restaurantName = try {
+                restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
+            } catch (e: Exception) {
+                "Restaurante" // Nombre por defecto en caso de error
+            }
+
+            val newPedido = createPedidoFromCartItems(restaurantId, items, restaurantName)
+
 
             pedidoRepository.addPedidoToOrder(order.id, newPedido, userId).fold(
                 onSuccess = {
@@ -247,7 +259,11 @@ class CartViewModel @Inject constructor(
         }
     }
 
-    private fun createPedidoFromCartItems(restaurantId: String, items: List<CartItem>): Pedido {
+    private fun createPedidoFromCartItems(
+        restaurantId: String,
+        items: List<CartItem>,
+        restaurantName: String
+    ): Pedido {
         val pedidoItems = items.map { cartItem ->
             PedidoItem(
                 dishId = cartItem.dish.id,
@@ -262,9 +278,6 @@ class CartViewModel @Inject constructor(
 
         val subtotal = pedidoItems.sumOf { it.totalPrice }
 
-        // TODO: Obtener el nombre real del restaurante
-        val restaurantName = "Restaurante"
-
         return Pedido(
             restaurantId = restaurantId,
             restaurantName = restaurantName,
@@ -275,10 +288,11 @@ class CartViewModel @Inject constructor(
         )
     }
 
-    private fun generateOrderNumber(): String {
-        val timestamp = System.currentTimeMillis()
+    private fun generateOrderNumber(restaurantName: String): String {
+        val timestamp = System.currentTimeMillis() //
         val random = (1000..9999).random()
-        return "ORD-$timestamp-$random"
+        val cleanName = restaurantName.replace(" ", "_")
+        return "ORD-${cleanName}-${random}-${timestamp}"
     }
 
     fun dismissConflictDialog() {

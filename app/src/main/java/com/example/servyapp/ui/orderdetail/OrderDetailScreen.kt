@@ -173,7 +173,7 @@ fun OrderDetailContent(
                         Text("Confirmar")
                     }
                     OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text("Borrar")
+                        Text("Cancelar")
                     }
                 }
             }
