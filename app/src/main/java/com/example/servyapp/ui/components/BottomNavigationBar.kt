@@ -9,6 +9,8 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.ui.Modifier
 
 sealed class BottomNavItem(
@@ -27,6 +29,18 @@ sealed class BottomNavItem(
         title = "Mi Orden",
         icon = Icons.Default.ShoppingCart
     )
+
+    object VirtualWaiter : BottomNavItem(
+        route = "virtual_waiter", // Esta será la nueva ruta
+        title = "Mesero",
+        icon = Icons.Default.SupportAgent
+    )
+
+    object Stats : BottomNavItem(
+        route = "stats", // Esta será la nueva ruta
+        title = "Estadísticas",
+        icon = Icons.Default.BarChart
+    )
     
     object Profile : BottomNavItem(
         route = "profile",
@@ -40,13 +54,15 @@ fun BottomNavigationBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
-) {
+){
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Cart,
+        BottomNavItem.VirtualWaiter,
+        BottomNavItem.Stats,
         BottomNavItem.Profile
     )
-    
+
     NavigationBar(modifier = modifier) {
         items.forEach { item ->
             NavigationBarItem(
