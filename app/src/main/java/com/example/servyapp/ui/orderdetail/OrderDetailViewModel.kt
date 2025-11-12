@@ -3,8 +3,10 @@ package com.example.servyapp.ui.orderdetail
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.servyapp.data.repository.AnalyticsRepository
 import com.example.servyapp.data.repository.CardRepository
 import com.example.servyapp.data.repository.PedidoRepository
+import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +20,8 @@ import javax.inject.Inject
 class OrderDetailViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
     private val cardRepository: CardRepository,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val analyticsRepository: AnalyticsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrderDetailState())
@@ -107,6 +110,8 @@ class OrderDetailViewModel @Inject constructor(
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
             reloadOrder(orderId, userId)
 
+            _uiState.value.order?.let { updateUserAnalytics(it, userId) }
+
             _uiState.update {
                 it.copy(successMessage = "Pago completado en efectivo")
             }
@@ -120,6 +125,8 @@ class OrderDetailViewModel @Inject constructor(
             pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", userId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
             reloadOrder(orderId, userId)
+
+            _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
             _uiState.update {
                 it.copy(successMessage = "Pago completado con Yape/Plin")
@@ -136,6 +143,8 @@ class OrderDetailViewModel @Inject constructor(
                 pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", userId)
                 pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
                 reloadOrder(orderId, userId)
+
+                _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
                 _uiState.update {
                     it.copy(successMessage = "Pago completado con tarjeta")
@@ -234,6 +243,16 @@ class OrderDetailViewModel @Inject constructor(
                     }
                 }
             )
+        }
+    }
+
+    private fun updateUserAnalytics(order: Order, userId: String) {
+        viewModelScope.launch {
+            val result = analyticsRepository.updateUserAnalytics(userId, order)
+
+            if (result.isFailure) {
+                Log.e("StatsErrorVM", "Falló la actualización de analíticas: ${result.exceptionOrNull()?.message}")
+            }
         }
     }
 }

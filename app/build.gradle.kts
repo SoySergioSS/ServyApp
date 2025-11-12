@@ -90,4 +90,7 @@ dependencies {
 
     //Librería de escaneo QR
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    //para las estadisticas
+    implementation("com.patrykandpatrick.vico:compose-m3:1.14.0")
 }
