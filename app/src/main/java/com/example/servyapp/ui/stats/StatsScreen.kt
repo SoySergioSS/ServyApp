@@ -47,7 +47,7 @@ fun StatsContent(state: StatsState) {
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // <-- AÑADIDO
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             when {
@@ -63,7 +63,7 @@ fun StatsContent(state: StatsState) {
                     // Gráfico 1 (Existente): Top 5 Platillos (Barras)
                     Text("Mis 5 Platillos Favoritos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     if (state.topDishes.isNotEmpty()) {
-                        val chartData = state.topDishes.mapIndexed { index, (dishId, count) ->
+                        val chartData = state.topDishes.mapIndexed { index, (name, count) ->
                             entryOf(index.toFloat(), count.toFloat())
                         }
                         val entryModelProducer = ChartEntryModelProducer(chartData)
@@ -72,10 +72,10 @@ fun StatsContent(state: StatsState) {
                             chartModelProducer = entryModelProducer,
                             startAxis = rememberStartAxis(title = "Cantidad"),
                             bottomAxis = rememberBottomAxis(
-                                title = "Platillo (ID)",
+                                title = "Platillo",
                                 valueFormatter = { value, _ ->
-                                    val dishId = state.topDishes.getOrNull(value.toInt())?.first ?: ""
-                                    dishId.take(6) + "..."
+                                    val name = state.topDishes.getOrNull(value.toInt())?.first ?: ""
+                                    name.take(15) + "..." // acortar nombre
                                 }
                             ),
                             modifier = Modifier.height(250.dp)
@@ -88,7 +88,6 @@ fun StatsContent(state: StatsState) {
 
                     // Gráfico 2 (Nuevo): Gasto por Mes (Líneas)
                     Text("Gasto Mensual", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Log.d("GASTO_MENSUAL", "monthlySpent = ${state.monthlySpent}")
                     if (state.monthlySpent.isNotEmpty()) {
                         val lineData = state.monthlySpent.mapIndexed { index, (mes, gasto) ->
                             entryOf(index.toFloat(), gasto.toFloat())
@@ -119,14 +118,14 @@ fun StatsContent(state: StatsState) {
                         // 1. Prepara los datos para el PieChart
                         val colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.outline)
                         val pieChartData = PieChartData(
-                            slices = state.restaurantSpent.mapIndexed { index, (restId, gasto) ->
+                            slices = state.restaurantSpent.mapIndexed { index, (name, gasto) ->
                                 PieChartData.Slice(
-                                    label = restId.take(6) + "...", // ID Acortado
+                                    label = name,
                                     value = gasto.toFloat(),
-                                    color = colors[index % colors.size] // Asigna colores
+                                    color = colors[index % colors.size]
                                 )
                             },
-                            plotType = PlotType.Pie // Tipo Pastel
+                            plotType = PlotType.Pie
                         )
                         val pieChartConfig = PieChartConfig(
                             strokeWidth = 1f,
