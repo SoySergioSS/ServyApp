@@ -38,6 +38,7 @@ import com.example.servyapp.ui.signup.SignupScreen
 import com.example.servyapp.ui.signup.SignupViewModel
 import com.example.servyapp.ui.splash.SplashScreen
 import com.example.servyapp.ui.start.StartScreen
+import com.example.servyapp.ui.stats.StatsScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -287,9 +288,7 @@ fun AppNavigation(
             }
 
             composable(route = Screen.Stats.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Pantalla de Estadísticas") //por ahora
-                }
+                StatsScreen()
             }
 
         }
