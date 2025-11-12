@@ -46,12 +46,22 @@ class StatsViewModel @Inject constructor(
                             .sortedByDescending { it.second }
                             .take(5)
 
+                        val monthlySpentMap = (dataMap["monthlySpent"] as? Map<String, Double>) ?: emptyMap()
+                        val sortedMonthlySpent = monthlySpentMap.toList().sortedBy { it.first }
+
+                        // Gráfico de Pastel (Gasto por Restaurante)
+                        val restaurantSpentMap = (dataMap["restaurantSpent"] as? Map<String, Double>) ?: emptyMap()
+                        val sortedRestaurantSpent = restaurantSpentMap.toList()
+                            .sortedByDescending { it.second }
+
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 totalSpent = totalSpent,
                                 totalOrders = totalOrders,
-                                topDishes = topDishes
+                                topDishes = topDishes,
+                                monthlySpent = sortedMonthlySpent,
+                                restaurantSpent = sortedRestaurantSpent
                             )
                         }
                     },

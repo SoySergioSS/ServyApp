@@ -1,6 +1,8 @@
 package com.example.servyapp.data.datasource
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.example.servyapp.domain.model.Order
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -8,6 +10,8 @@ import com.google.firebase.firestore.Transaction // <-- ¡Importante!
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 // (Quita SetOptions si ya no lo usas en otro lado)
 
 @Singleton
@@ -21,22 +25,32 @@ class AnalyticsRemoteDataSource @Inject constructor(
      * Escribe o actualiza las analíticas de un usuario después de una orden
      * USANDO UNA TRANSACCIÓN para evitar sobrescrituras.
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun updateUserAnalytics(userId: String, order: Order): Result<Unit> {
         return try {
             val analyticsDocRef = analyticsCollection().document(userId)
 
-            // 1. Ejecutamos todo dentro de una transacción
+            // --- Nuevos datos a registrar ---
+            val restaurantId = order.pedidos.firstOrNull()?.restaurantId ?: "unknown"
+            val currentMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("YYYY-MM"))
+
+            // Creamos las "llaves" para los mapas anidados
+            val monthlySpentField = "monthlySpent.$currentMonth"
+            val restaurantSpentField = "restaurantSpent.$restaurantId"
+            // --- Fin de nuevos datos ---
+
             firestore.runTransaction { transaction ->
-                // 2. Leemos el documento de analíticas DENTRO de la transacción
                 val snapshot = transaction.get(analyticsDocRef)
 
                 if (snapshot.exists()) {
-                    // --- CASO 1: El documento SÍ existe ---
-                    // Preparamos los incrementos para .update()
+                    // --- CASO 1: El documento SÍ existe (Actualizamos) ---
                     val updates = mutableMapOf<String, Any>(
                         "totalSpent" to FieldValue.increment(order.totalAmount),
-                        "totalOrders" to FieldValue.increment(1)
+                        "totalOrders" to FieldValue.increment(1),
+                        monthlySpentField to FieldValue.increment(order.totalAmount), // <-- NUEVO
+                        restaurantSpentField to FieldValue.increment(order.totalAmount) // <-- NUEVO
                     )
+
                     order.pedidos.forEach { pedido ->
                         pedido.items.forEach { item ->
                             if (item.dishId.isNotBlank()) {
@@ -45,37 +59,29 @@ class AnalyticsRemoteDataSource @Inject constructor(
                             }
                         }
                     }
-
-                    // Actualizamos el documento existente
                     transaction.update(analyticsDocRef, updates)
 
                 } else {
-                    // --- CASO 2: El documento NO existe ---
-                    // No podemos usar increment(), así que creamos el documento
-                    // con los valores de esta primera orden.
-
+                    // --- CASO 2: El documento NO existe (Lo creamos) ---
                     val initialDishCount = mutableMapOf<String, Long>()
                     order.pedidos.forEach { pedido ->
                         pedido.items.forEach { item ->
                             if (item.dishId.isNotBlank()) {
-                                val currentCount = initialDishCount.getOrDefault(item.dishId, 0L)
-                                initialDishCount[item.dishId] = currentCount + item.quantity
+                                initialDishCount[item.dishId] = item.quantity.toLong()
                             }
                         }
                     }
 
                     val initialData = mapOf(
-                        "totalSpent" to order.totalAmount, // El primer gasto
-                        "totalOrders" to 1L,             // La primera orden
-                        "dishCount" to initialDishCount  // El primer mapa de platillos
+                        "totalSpent" to order.totalAmount,
+                        "totalOrders" to 1L,
+                        "dishCount" to initialDishCount,
+                        "monthlySpent" to mapOf(currentMonth to order.totalAmount), // <-- NUEVO
+                        "restaurantSpent" to mapOf(restaurantId to order.totalAmount) // <-- NUEVO
                     )
-
-                    // Creamos el documento por primera vez
                     transaction.set(analyticsDocRef, initialData)
                 }
-
-                // La transacción termina exitosamente
-            }.await() // Esperamos a que la transacción se complete
+            }.await()
 
             Result.success(Unit)
 
