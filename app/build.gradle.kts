@@ -92,7 +92,7 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     //vico para graficos de barra
-    implementation("com.patrykandpatrick.vico:compose-m3:1.14.0")
+    implementation(libs.vico.compose.m3)
 
     //Pie Charts
     implementation("co.yml:ycharts:2.1.0")
