@@ -29,8 +29,8 @@ class RestaurantRepository @Inject constructor(
         remoteDataSource.deleteRestaurant(id)
     }
 
-    suspend fun assignTableSecure(restaurantId: String, requiredSeats: Int)
-            = remoteDataSource.assignTableSecure(restaurantId, requiredSeats)
+    suspend fun assignTableSecure(restaurantId: String, requiredSeats: Int, orderId: String)
+            = remoteDataSource.assignTableSecure(restaurantId, requiredSeats,orderId)
 
     suspend fun updateOrderWithTable(orderId: String, restaurantId: String, tableId: String, tableNumber: Int) =
         remoteDataSource.updateOrderWithTable(orderId, restaurantId, tableId, tableNumber)

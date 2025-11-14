@@ -96,7 +96,8 @@ class OrderDetailViewModel @Inject constructor(
 
                 val assigned = restaurantRepository.assignTableSecure(
                     restaurantId = orderRestaurantId!!,
-                    requiredSeats = order.requiredSeats
+                    requiredSeats = order.requiredSeats,
+                    orderId = order.id
                 )
 
                 if (assigned == null) {
@@ -127,10 +128,18 @@ class OrderDetailViewModel @Inject constructor(
                 }
 
 
-                updateStatus(OrderStatus.IN_PROGRESS, "¡Orden confirmada exitosamente!")
-            } else {
-                // no coincide
-                _uiState.update { it.copy(isLoading = false, errorMessage = "QR Incorrecto. Esta orden no pertenece a este restaurante.") }
+                updateStatus(
+                    OrderStatus.IN_PROGRESS,
+                    "¡Orden confirmada exitosamente! Mesa asignada: ${assigned.number}"
+                )
+            }else {
+                // QR no coincide
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "QR Incorrecto. Esta orden no pertenece a este restaurante."
+                    )
+                }
             }
         }
     }
@@ -295,6 +304,8 @@ class OrderDetailViewModel @Inject constructor(
     fun setRequiredSeats(seats: Int) {
         _uiState.update { it.copy(order = it.order?.copy(requiredSeats = seats)) }
     }
+
+
 
 }
 
