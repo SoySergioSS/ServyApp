@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.servyapp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -87,4 +87,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
 
     implementation("io.coil-kt:coil-compose:2.4.0")
+
+    //Librería de escaneo QR
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    //vico para graficos de barra
+    implementation(libs.vico.compose.m3)
+
+    //Pie Charts
+    implementation("co.yml:ycharts:2.1.0")
 }

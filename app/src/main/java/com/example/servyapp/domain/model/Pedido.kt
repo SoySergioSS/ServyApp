@@ -7,7 +7,6 @@ import com.google.firebase.firestore.PropertyName
 data class Pedido(
     val id: String = "",
     val restaurantId: String = "",
-    val restaurantName: String = "",
     val items: List<PedidoItem> = emptyList(),
     val subtotal: Double = 0.0,
     @JvmField @PropertyName("created_at")
