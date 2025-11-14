@@ -82,7 +82,6 @@ fun AppNavigation(
         Screen.Home.route,
         Screen.Orders.route,
         Screen.Profile.route,
-        Screen.VirtualWaiter.route,
         Screen.Stats.route
     )
 
@@ -286,7 +285,9 @@ fun AppNavigation(
 //                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
 //                    Text(text = "Hola")
 //                }
-                VoiceAssistantScreen()
+                VoiceAssistantScreen(onBackClick = {
+                    navHostController.popBackStack()
+                })
             }
 
             composable(route = Screen.Stats.route) {
