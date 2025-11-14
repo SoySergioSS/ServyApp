@@ -5,6 +5,7 @@ import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import com.example.servyapp.domain.model.Pedido
 import com.example.servyapp.domain.model.PedidoStatus
+import com.example.servyapp.domain.model.Table
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -260,4 +261,13 @@ class PedidoRemoteDataSource @Inject constructor(
     private fun generatePedidoId(): String {
         return "pedido_${System.currentTimeMillis()}_${(0..9999).random()}"
     }
+
+
+
+
+
+
 }
+
+
+

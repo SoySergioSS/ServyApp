@@ -6,6 +6,7 @@ import androidx.annotation.RequiresApi
 import com.example.servyapp.domain.model.Order
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Transaction // <-- ¡Importante!
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -25,19 +26,15 @@ class AnalyticsRemoteDataSource @Inject constructor(
      * Escribe o actualiza las analíticas de un usuario después de una orden
      * USANDO UNA TRANSACCIÓN para evitar sobrescrituras.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun updateUserAnalytics(userId: String, order: Order): Result<Unit> {
         return try {
             val analyticsDocRef = analyticsCollection().document(userId)
 
-            // --- Nuevos datos a registrar ---
             val restaurantId = order.pedidos.firstOrNull()?.restaurantId ?: "unknown"
             val currentMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("YYYY-MM"))
 
-            // Creamos las "llaves" para los mapas anidados
             val monthlySpentField = "monthlySpent.$currentMonth"
             val restaurantSpentField = "restaurantSpent.$restaurantId"
-            // --- Fin de nuevos datos ---
 
             firestore.runTransaction { transaction ->
                 val snapshot = transaction.get(analyticsDocRef)
@@ -47,27 +44,43 @@ class AnalyticsRemoteDataSource @Inject constructor(
                     val updates = mutableMapOf<String, Any>(
                         "totalSpent" to FieldValue.increment(order.totalAmount),
                         "totalOrders" to FieldValue.increment(1),
-                        monthlySpentField to FieldValue.increment(order.totalAmount), // <-- NUEVO
-                        restaurantSpentField to FieldValue.increment(order.totalAmount) // <-- NUEVO
+                        monthlySpentField to FieldValue.increment(order.totalAmount),
+                        restaurantSpentField to FieldValue.increment(order.totalAmount)
                     )
 
                     order.pedidos.forEach { pedido ->
                         pedido.items.forEach { item ->
                             if (item.dishId.isNotBlank()) {
-                                val fieldPath = "dishCount.${item.dishId}"
-                                updates[fieldPath] = FieldValue.increment(item.quantity.toLong())
+                                // Para 'dishCount' (el contador)
+                                val countFieldPath = "dishCount.${item.dishId}"
+                                updates[countFieldPath] = FieldValue.increment(item.quantity.toLong())
+
+                                // --- ESTA ES LA CORRECCIÓN ---
+                                // Añadimos el nombre AL MISMO MAPA de updates
+                                // usando notación de puntos.
+                                val nameFieldPath = "dishNames.${item.dishId}"
+                                updates[nameFieldPath] = item.dishName
+                                // --- FIN DE LA CORRECCIÓN ---
                             }
                         }
                     }
+
+                    // Ahora 'updates' contiene AMBOS los incrementos Y los nombres
                     transaction.update(analyticsDocRef, updates)
+
+                    // ELIMINAMOS EL .set() SEPARADO QUE ESTABA CAUSANDO EL ERROR
 
                 } else {
                     // --- CASO 2: El documento NO existe (Lo creamos) ---
+                    // (Esta parte ya estaba correcta)
                     val initialDishCount = mutableMapOf<String, Long>()
+                    val initialDishNames = mutableMapOf<String, String>()
+
                     order.pedidos.forEach { pedido ->
                         pedido.items.forEach { item ->
                             if (item.dishId.isNotBlank()) {
                                 initialDishCount[item.dishId] = item.quantity.toLong()
+                                initialDishNames[item.dishId] = item.dishName
                             }
                         }
                     }
@@ -76,8 +89,9 @@ class AnalyticsRemoteDataSource @Inject constructor(
                         "totalSpent" to order.totalAmount,
                         "totalOrders" to 1L,
                         "dishCount" to initialDishCount,
-                        "monthlySpent" to mapOf(currentMonth to order.totalAmount), // <-- NUEVO
-                        "restaurantSpent" to mapOf(restaurantId to order.totalAmount) // <-- NUEVO
+                        "dishNames" to initialDishNames, // <-- El mapa de nombres
+                        "monthlySpent" to mapOf(currentMonth to order.totalAmount),
+                        "restaurantSpent" to mapOf(restaurantId to order.totalAmount)
                     )
                     transaction.set(analyticsDocRef, initialData)
                 }
@@ -95,7 +109,6 @@ class AnalyticsRemoteDataSource @Inject constructor(
      * Lee las analíticas de un usuario.
      */
     suspend fun getUserAnalytics(userId: String): Result<Map<String, Any>> {
-        // ... (Esta función no cambia y ya es correcta)
         return try {
             val doc = analyticsCollection().document(userId).get().await()
             if (doc.exists() && doc.data != null) {
