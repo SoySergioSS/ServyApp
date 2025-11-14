@@ -1,5 +1,6 @@
 package com.example.servyapp.navigation
 
+import VoiceAssistantScreen
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,7 +71,7 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppNavigation(
-    navHostController: NavHostController, modifier: Modifier = Modifier
+    navHostController: NavHostController
 ) {
     val signupViewModel: SignupViewModel = hiltViewModel()
     val navBackStackEntry by navHostController.currentBackStackEntryAsState()
@@ -104,7 +105,7 @@ fun AppNavigation(
         NavHost(
             navController = navHostController,
             startDestination = Screen.Splash.route,
-            modifier = modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(route = Screen.Splash.route) {
                 SplashScreen(
@@ -282,9 +283,10 @@ fun AppNavigation(
             }
 
             composable(route = Screen.VirtualWaiter.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Hola")
-                }
+//                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+//                    Text(text = "Hola")
+//                }
+                VoiceAssistantScreen()
             }
 
             composable(route = Screen.Stats.route) {
