@@ -14,18 +14,12 @@ import com.example.servyapp.navigation.AppNavigation
 
 @Composable
 fun ServyappApp(){
-    Scaffold(
-//        topBar = {
-//            ServyappTopAppBar()
-//        }
-    ) {
+
         val navController = rememberNavController()
 
         AppNavigation(
             navController,
-            modifier = Modifier.padding(it)
         )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

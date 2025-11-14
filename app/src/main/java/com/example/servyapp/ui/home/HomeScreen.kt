@@ -73,9 +73,7 @@ fun HomeScreenContent(
     onRestaurantClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
-        modifier = modifier,
-        topBar = {
+    Column(modifier = modifier.fillMaxSize()) {
             TopAppBar(
                 title = {
                     Text(
@@ -83,12 +81,9 @@ fun HomeScreenContent(
                     )
                 }
             )
-        }
-    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
+                .weight(1f)
         ) {
             // El 'when' maneja los 3 estados: Carga, Error, Contenido
 
