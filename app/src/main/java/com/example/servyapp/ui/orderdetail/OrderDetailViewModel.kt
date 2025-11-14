@@ -152,9 +152,16 @@ class OrderDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = auth.currentUser?.uid ?: return@launch
 
+
             pedidoRepository.updatePaymentMethod(orderId, "Efectivo", userId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
+
             reloadOrder(orderId, userId)
+
+            // liberar mesa usando solo orderId
+            val released = restaurantRepository.releaseTable(orderId)
+            Log.e("PAYMENT", "Mesa liberada: $released")
+
 
             _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
@@ -171,6 +178,11 @@ class OrderDetailViewModel @Inject constructor(
             pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", userId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
             reloadOrder(orderId, userId)
+
+
+            // liberar mesa usando solo orderId
+            val released = restaurantRepository.releaseTable(orderId)
+            Log.e("PAYMENT", "Mesa liberada: $released")
 
             _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
@@ -189,6 +201,11 @@ class OrderDetailViewModel @Inject constructor(
                 pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", userId)
                 pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
                 reloadOrder(orderId, userId)
+
+
+                // liberar mesa usando solo orderId
+                val released = restaurantRepository.releaseTable(orderId)
+                Log.e("PAYMENT", "Mesa liberada: $released")
 
                 _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 

@@ -35,6 +35,6 @@ class RestaurantRepository @Inject constructor(
     suspend fun updateOrderWithTable(orderId: String, restaurantId: String, tableId: String, tableNumber: Int) =
         remoteDataSource.updateOrderWithTable(orderId, restaurantId, tableId, tableNumber)
 
-    suspend fun releaseTable(restaurantId: String, tableId: String) =
-        remoteDataSource.releaseTable(restaurantId, tableId)
+    suspend fun releaseTable(orderId: String) =
+        remoteDataSource.releaseTable(orderId)
 }

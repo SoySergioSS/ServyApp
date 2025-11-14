@@ -161,23 +161,37 @@ class RestaurantRemoteDataSource @Inject constructor(
 
 
     suspend fun releaseTable(
-        restaurantId: String,
-        tableId: String
+        orderId: String
     ): Boolean {
         return try {
-            val tableRef = firestore.collection("restaurants")
-                .document(restaurantId)
-                .collection("tables")
-                .document(tableId)
+            // buscar dentro de todos los restaurantes
+            val restaurants = firestore.collection("restaurants").get().await()
 
-            tableRef.update(
-                mapOf(
-                    "isOccupied" to false,
-                    "currentOrderId" to null
-                )
-            ).await()
+            var released = false
 
-            true
+            for (restaurant in restaurants.documents) {
+
+                val tablesRef = restaurant.reference.collection("tables")
+                val tablesSnap = tablesRef
+                    .whereEqualTo("currentOrderId", orderId)
+                    .get()
+                    .await()
+
+                if (!tablesSnap.isEmpty) {
+                    val tableDoc = tablesSnap.documents.first()
+                    tableDoc.reference.update(
+                        mapOf(
+                            "isOccupied" to false,
+                            "currentOrderId" to null
+                        )
+                    ).await()
+
+                    released = true
+                    break
+                }
+            }
+
+            released
         } catch (e: Exception) {
             e.printStackTrace()
             false
