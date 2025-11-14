@@ -52,7 +52,7 @@ fun VoiceAssistantScreen(
         },
         floatingActionButton = {
             LargeFloatingActionButton(
-                onClick = { /* TODO: Acción para el micrófono */ },
+                onClick = { /* modificacion commentada */ },
                 modifier = Modifier.padding(bottom = 32.dp)
             ) {
                 Icon(
