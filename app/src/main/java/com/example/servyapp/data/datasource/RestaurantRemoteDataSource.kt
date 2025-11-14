@@ -1,6 +1,7 @@
 package com.example.servyapp.data.datasource
 
 import com.example.servyapp.domain.model.Restaurant
+import com.example.servyapp.domain.model.Table
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -44,4 +45,122 @@ class RestaurantRemoteDataSource @Inject constructor(
     suspend fun deleteRestaurant(id: String) { //tal vez como admin se podrá hacer más adelante
         collection.document(id).delete().await()
     }
+
+
+    //ASIGNACION DE MESA
+
+    suspend fun assignTableSecure(
+        restaurantId: String,
+        requiredSeats: Int
+    ): Table? {
+
+        val tablesRef = firestore
+            .collection("restaurants")
+            .document(restaurantId)
+            .collection("tables")
+
+        return try {
+            // 1️⃣ Obtener mesas libres fuera de la transacción
+            val freeTables = tablesRef
+                .whereEqualTo("isOccupied", false)
+                .get()
+                .await()
+
+            // Filtrar mesas que cumplen los asientos necesarios
+            val suitableTables = freeTables.documents
+                .filter { (it.getLong("seats") ?: 0L) >= requiredSeats }
+                .sortedBy { it.getLong("seats") ?: Long.MAX_VALUE }
+
+            if (suitableTables.isEmpty()) return null
+
+            val selected = suitableTables.first()
+            val selectedRef = selected.reference
+
+            // 2️⃣ Transacción para evitar colisiones
+            firestore.runTransaction { transaction ->
+
+                val fresh = transaction.get(selectedRef)
+
+                val isStillFree = fresh.getBoolean("isOccupied") == false
+
+                if (!isStillFree) return@runTransaction null
+
+                // 3️⃣ Ocupa la mesa
+                transaction.update(selectedRef, mapOf(
+                    "isOccupied" to true,
+                    "currentOrderId" to "TEMP" // Luego se reemplaza por orderId real
+                ))
+
+                // 4️⃣ Construimos el objeto Table con ID
+                Table(
+                    id = fresh.id,
+                    number = fresh.getLong("number")!!.toInt(),
+                    seats = fresh.getLong("seats")!!.toInt(),
+                    isOccupied = true,
+                    currentOrderId = "TEMP"
+                )
+            }.await()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun updateOrderWithTable(
+        orderId: String,
+        restaurantId: String,
+        tableId: String,
+        tableNumber: Int
+    ): Boolean {
+        return try {
+            val orderRef = firestore.collection("orders").document(orderId)
+            val tableRef = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("tables")
+                .document(tableId)
+
+            firestore.runBatch { batch ->
+                batch.update(orderRef, mapOf(
+                    "tableId" to tableId,
+                    "tableNumber" to tableNumber
+                ))
+
+                batch.update(tableRef, mapOf(
+                    "currentOrderId" to orderId
+                ))
+            }.await()
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun releaseTable(
+        restaurantId: String,
+        tableId: String
+    ): Boolean {
+        return try {
+            val tableRef = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("tables")
+                .document(tableId)
+
+            tableRef.update(
+                mapOf(
+                    "isOccupied" to false,
+                    "currentOrderId" to null
+                )
+            ).await()
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+
 }

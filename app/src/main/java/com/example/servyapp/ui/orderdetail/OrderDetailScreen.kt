@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -25,12 +26,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -68,6 +73,10 @@ fun OrderDetailScreen(
     val state by viewModel.uiState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var showSeatSheet by remember { mutableStateOf(false) }
+
+    var requiredSeats by remember { mutableStateOf(1) } // valor inicial 1 asiento
 
     val qrScannerLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
@@ -142,11 +151,7 @@ fun OrderDetailScreen(
                 OrderDetailContent(
                     order = order,
                     onConfirm = {
-                        val options = ScanOptions()
-                        options.setPrompt("Escanea el QR del restaurante")
-                        options.setBeepEnabled(true)
-                        options.setOrientationLocked(false)
-                        qrScannerLauncher.launch(options)
+                        showSeatSheet = true
                     },
                     onCancel = { viewModel.cancelOrder() },
                     onPay = { method ->
@@ -161,6 +166,23 @@ fun OrderDetailScreen(
                     },
                     modifier = Modifier.padding(paddingValues)
                 )
+                if (showSeatSheet) {
+                    SeatSelectionBottomSheet(
+                        requiredSeats = requiredSeats,
+                        onSeatsChange = { requiredSeats = it },
+                        onConfirm = {
+                            showSeatSheet = false
+                            viewModel.setRequiredSeats(requiredSeats)
+
+                            val options = ScanOptions()
+                            options.setPrompt("Escanea el QR del restaurante")
+                            options.setBeepEnabled(true)
+                            options.setOrientationLocked(false)
+                            qrScannerLauncher.launch(options)
+                        },
+                        onDismiss = { showSeatSheet = false }
+                    )
+                }
             }
         }
     }
@@ -412,6 +434,71 @@ fun OrderDetailScreenContent(
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SeatSelectionBottomSheet(
+    initialSeats: Int = 1,
+    requiredSeats: Int,
+    onSeatsChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+    var seatText by remember { mutableStateOf(initialSeats.toString()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Número de Personas",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            OutlinedTextField(
+                value = seatText,
+                onValueChange = { newText ->
+                    // Solo permitir números
+                    if (newText.all { it.isDigit() }) {
+                        seatText = newText
+                    }
+                },
+                label = { Text("Asientos requeridos") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    val seats = seatText.toIntOrNull() ?: 1
+                    onSeatsChange(seats)
+                    onConfirm()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Escanear QR y Confirmar")
+            }
+
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancelar")
+            }
+        }
+    }
+
+}
 
 /* ----------------------------
    Datos de prueba para preview
