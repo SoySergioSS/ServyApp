@@ -104,7 +104,7 @@ fun StatsContent(state: StatsState) {
                         }
                         val entryModelProducer = ChartEntryModelProducer(chartData)
 
-                        
+
                         Chart(
                             chart = columnChart(
                                 columns = vicoColumnColors

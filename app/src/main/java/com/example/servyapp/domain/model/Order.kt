@@ -11,9 +11,10 @@ data class Order(
     val orderNumber: String = "",
     val pedidos: List<Pedido> = emptyList(),
     val totalAmount: Double = 0.0,
-    val status: OrderStatus = OrderStatus.PENDING ,//no se si las ordenes tienen status
+    val status: OrderStatus = OrderStatus.PENDING,
+    val paymentMethod: String = "",
 
-    // NUEVOS CAMPOS
+
     val requiredSeats: Int = 1,
     val tableId: String? = null,
     val tableNumber: Int? = null
