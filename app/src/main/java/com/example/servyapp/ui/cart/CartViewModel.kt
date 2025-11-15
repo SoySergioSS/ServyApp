@@ -38,6 +38,7 @@ class CartViewModel @Inject constructor(
 
     private fun loadCartItems() {
         viewModelScope.launch {
+            // Recogemos el Flow de Room
             cartManager.cartItems.collectLatest { items ->
                 _uiState.update { it.copy(items = items) }
             }
@@ -45,11 +46,15 @@ class CartViewModel @Inject constructor(
     }
 
     fun incrementQuantity(cartItemId: String) {
-        cartManager.incrementQuantity(cartItemId)
+        viewModelScope.launch {
+            cartManager.incrementQuantity(cartItemId)
+        }
     }
 
     fun decrementQuantity(cartItemId: String) {
-        cartManager.decrementQuantity(cartItemId)
+        viewModelScope.launch {
+            cartManager.decrementQuantity(cartItemId)
+        }
     }
 
     fun showDeleteDialog(item: CartItem) {
@@ -63,13 +68,17 @@ class CartViewModel @Inject constructor(
     fun confirmDeleteItem() {
         val item = _uiState.value.showDeleteDialog
         if (item != null) {
-            cartManager.removeFromCart(item.id)
-            dismissDeleteDialog()
+            viewModelScope.launch {
+                cartManager.removeFromCart(item.id)
+                dismissDeleteDialog()
+            }
         }
     }
 
     fun clearCart() {
-        cartManager.clearCart()
+        viewModelScope.launch {
+            cartManager.clearCart()
+        }
     }
 
     fun onItemClick(item: CartItem) {
@@ -85,79 +94,64 @@ class CartViewModel @Inject constructor(
 
     fun onPedidoClick() {
         if (_uiState.value.items.isNotEmpty()) {
-            createOrAddToOrder()
+            viewModelScope.launch {
+                createOrAddToOrder()
+            }
         }
     }
 
-    private fun createOrAddToOrder() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+    private suspend fun createOrAddToOrder() {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            try {
-                val currentUser = auth.currentUser
-                if (currentUser == null) {
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = "Usuario no autenticado",
-                            isLoading = false
-                        )
-                    }
-                    return@launch
+        try {
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                _uiState.update {
+                    it.copy(errorMessage = "Usuario no autenticado", isLoading = false)
                 }
+                return
+            }
 
-                val cartItems = _uiState.value.items
-                if (cartItems.isEmpty()) return@launch
+            val cartItems = _uiState.value.items
+            if (cartItems.isEmpty()) return
 
-                val currentCartRestaurants = cartItems.map { it.restaurantId }.distinct()
+            val currentCartRestaurants = cartItems.map { it.restaurantId }.distinct()
+            val activeOrderResult = pedidoRepository.getActiveOrder(currentUser.uid)
 
-                val activeOrderResult = pedidoRepository.getActiveOrder(currentUser.uid)
+            activeOrderResult.fold(
+                onSuccess = { existingOrder ->
+                    if (existingOrder != null) {
+                        val orderRestaurants = existingOrder.pedidos.map { it.restaurantId }.distinct()
 
-                activeOrderResult.fold(
-                    onSuccess = { existingOrder ->
-                        if (existingOrder != null) {
-                            val orderRestaurants = existingOrder.pedidos.map { it.restaurantId }.distinct()
+                        val hasConflict = currentCartRestaurants.any { cartRestaurant ->
+                            !orderRestaurants.contains(cartRestaurant)
+                        }
 
-                            val hasConflict = currentCartRestaurants.any { cartRestaurant ->
-                                !orderRestaurants.contains(cartRestaurant)
-                            }
-
-                            if (hasConflict) {
-                                val conflictRestaurants = currentCartRestaurants.filterNot {
-                                    orderRestaurants.contains(it)
-                                }
-
-                                _uiState.update {
-                                    it.copy(
-                                        errorMessage = "Ya tienes una orden activa en otro restaurante. " +
-                                                "Por favor, completa o cancela tu orden actual antes de pedir en otro lugar.",
-                                        isLoading = false,
-                                        showConflictDialog = true,
-                                        conflictingRestaurants = conflictRestaurants
-                                    )
-                                }
-                            } else {
-                                addPedidosToExistingOrder(currentUser.uid, existingOrder, cartItems)
+                        if (hasConflict) {
+                            _uiState.update {
+                                it.copy(
+                                    errorMessage = "Ya tienes una orden activa en otro restaurante. Por favor, completa o cancela tu orden actual antes de pedir en otro lugar.",
+                                    isLoading = false,
+                                    showConflictDialog = true,
+                                    conflictingRestaurants = currentCartRestaurants.filterNot { orderRestaurants.contains(it) }
+                                )
                             }
                         } else {
-                            createNewOrder(currentUser.uid, cartItems)
+                            addPedidosToExistingOrder(currentUser.uid, existingOrder, cartItems)
                         }
-                    },
-                    onFailure = { exception ->
-                        _uiState.update {
-                            it.copy(
-                                errorMessage = "Error al verificar orden: ${exception.message}",
-                                isLoading = false
-                            )
-                        }
+                    } else {
+                        createNewOrder(currentUser.uid, cartItems)
                     }
-                )
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "Error inesperado: ${e.message}",
-                        isLoading = false
-                    )
+                },
+                onFailure = { exception ->
+                    _uiState.update {
+                        it.copy(errorMessage = "Error al verificar orden: ${exception.message}", isLoading = false)
+                    }
                 }
+            )
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(errorMessage = "Error inesperado: ${e.message}", isLoading = false)
             }
         }
     }
@@ -165,21 +159,21 @@ class CartViewModel @Inject constructor(
     private suspend fun createNewOrder(userId: String, cartItems: List<CartItem>) {
         val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
 
-        val restaurantId = cartItems.first().restaurantId
-
-        val restaurantName = try {
-            restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
-        } catch (e: Exception) {
-            "Restaurante" //por defecto en caso de error
-        }
-
-        val pedidos = itemsByRestaurant.map { (id, items) ->
-            createPedidoFromCartItems(id, items)
+        val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
+            val restaurantName = try {
+                restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
+            } catch (e: Exception) {
+                "Restaurante"
+            }
+            createPedidoFromCartItems(restaurantId, items, restaurantName)
         }
 
         val totalAmount = pedidos.sumOf { it.subtotal }
 
-        val orderNumber = generateOrderNumber(restaurantName)
+        // CORRECCIÓN: Accedemos a 'restaurantName' de forma segura.
+        // Si el compilador seguía fallando aquí, era por un problema de caché.
+        val orderRestaurantName = pedidos.firstOrNull()?.restaurantName ?: "General"
+        val orderNumber = generateOrderNumber(orderRestaurantName)
 
         val order = Order(
             userId = userId,
@@ -192,20 +186,18 @@ class CartViewModel @Inject constructor(
 
         pedidoRepository.createOrder(order, userId).fold(
             onSuccess = {
-                clearCart()
+                cartManager.clearCart()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        navigationEvent = NavigationEvent.NavigateToOrders
+                        navigationEvent = NavigationEvent.NavigateToOrders,
+                        errorMessage = null
                     )
                 }
             },
             onFailure = { exception ->
                 _uiState.update {
-                    it.copy(
-                        errorMessage = "Error al crear la orden: ${exception.message}",
-                        isLoading = false
-                    )
+                    it.copy(errorMessage = "Error al crear la orden: ${exception.message}", isLoading = false)
                 }
             }
         )
@@ -217,13 +209,16 @@ class CartViewModel @Inject constructor(
         cartItems: List<CartItem>
     ) {
         val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
-
         var allPedidosAdded = true
 
         for ((restaurantId, items) in itemsByRestaurant) {
+            val restaurantName = try {
+                restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
+            } catch (e: Exception) {
+                "Restaurante"
+            }
 
-            val newPedido = createPedidoFromCartItems(restaurantId, items)
-
+            val newPedido = createPedidoFromCartItems(restaurantId, items, restaurantName)
 
             pedidoRepository.addPedidoToOrder(order.id, newPedido, userId).fold(
                 onSuccess = {
@@ -232,10 +227,7 @@ class CartViewModel @Inject constructor(
                 onFailure = { exception ->
                     allPedidosAdded = false
                     _uiState.update {
-                        it.copy(
-                            errorMessage = "Error al agregar pedido: ${exception.message}",
-                            isLoading = false
-                        )
+                        it.copy(errorMessage = "Error al agregar pedido: ${exception.message}", isLoading = false)
                     }
                     return
                 }
@@ -243,11 +235,12 @@ class CartViewModel @Inject constructor(
         }
 
         if (allPedidosAdded) {
-            clearCart()
+            cartManager.clearCart()
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    navigationEvent = NavigationEvent.NavigateToOrders
+                    navigationEvent = NavigationEvent.NavigateToOrders,
+                    errorMessage = null
                 )
             }
         }
@@ -255,7 +248,8 @@ class CartViewModel @Inject constructor(
 
     private fun createPedidoFromCartItems(
         restaurantId: String,
-        items: List<CartItem>
+        items: List<CartItem>,
+        restaurantName: String
     ): Pedido {
         val pedidoItems = items.map { cartItem ->
             PedidoItem(
@@ -271,8 +265,12 @@ class CartViewModel @Inject constructor(
 
         val subtotal = pedidoItems.sumOf { it.totalPrice }
 
+        // CORRECCIÓN FINAL: Incluimos explícitamente el 'id' (vacío) para evitar
+        // que el compilador posicione mal los siguientes argumentos y reporte error.
         return Pedido(
+            id = "",
             restaurantId = restaurantId,
+            restaurantName = restaurantName,
             items = pedidoItems,
             subtotal = subtotal,
             createdAt = Timestamp.now(),
@@ -281,7 +279,7 @@ class CartViewModel @Inject constructor(
     }
 
     private fun generateOrderNumber(restaurantName: String): String {
-        val timestamp = System.currentTimeMillis() //
+        val timestamp = System.currentTimeMillis()
         val random = (1000..9999).random()
         val cleanName = restaurantName.replace(" ", "_")
         return "ORD-${cleanName}-${random}-${timestamp}"
