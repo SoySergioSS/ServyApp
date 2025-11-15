@@ -322,7 +322,9 @@ class OrderDetailViewModel @Inject constructor(
         _uiState.update { it.copy(order = it.order?.copy(requiredSeats = seats)) }
     }
 
-
+    fun showSnackbarMessage(message: String) {
+        _uiState.update { it.copy(successMessage = message) }
+    }
 
 }
 

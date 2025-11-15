@@ -159,13 +159,16 @@ class CartViewModel @Inject constructor(
     private suspend fun createNewOrder(userId: String, cartItems: List<CartItem>) {
         val itemsByRestaurant = cartItems.groupBy { it.restaurantId }
 
-        val pedidos = itemsByRestaurant.map { (restaurantId, items) ->
-            val restaurantName = try {
-                restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
-            } catch (e: Exception) {
-                "Restaurante"
-            }
-            createPedidoFromCartItems(restaurantId, items, restaurantName)
+        val restaurantId = cartItems.first().restaurantId
+
+        val restaurantName = try {
+            restaurantRepository.getRestaurant(restaurantId)?.name ?: "Restaurante"
+        } catch (e: Exception) {
+            "Restaurante" //por defecto en caso de error
+        }
+
+        val pedidos = itemsByRestaurant.map { (id, items) ->
+            createPedidoFromCartItems(id, items, restaurantName)
         }
 
         val totalAmount = pedidos.sumOf { it.subtotal }

@@ -17,6 +17,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.example.servyapp.ui.utils.PdfGenerator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +76,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderDetailScreen(
@@ -83,6 +98,28 @@ fun OrderDetailScreen(
             viewModel.validateQrAndConfirmOrder(result.contents)
         } else {
             viewModel.clearMessages()
+        }
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permiso concedido, generar PDF
+            scope.launch(Dispatchers.IO) {
+                val order = viewModel.uiState.value.order
+                if (order != null) {
+                    val success = PdfGenerator.createOrderPdf(context, order)
+                    val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                    viewModel.showSnackbarMessage(message)
+                }
+            }
+        } else {
+            // Permiso denegado
+            viewModel.showSnackbarMessage("Permiso de almacenamiento denegado")
         }
     }
 
@@ -164,6 +201,32 @@ fun OrderDetailScreen(
                     onCancelPedido = { pedidoId ->
                         viewModel.cancelPedido(pedidoId)
                     },
+                    onDownloadPdf = {
+                        // 1. Revisar versión de Android
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                            val permission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
+                            if (permission == PackageManager.PERMISSION_GRANTED) {
+                                // 3a. Permiso OK, generar PDF
+                                scope.launch(Dispatchers.IO) {
+                                    val success = PdfGenerator.createOrderPdf(context, order)
+                                    val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                                    viewModel.showSnackbarMessage(message)
+                                }
+                            } else {
+                                // 3b. Pedir permiso
+                                permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        } else {
+                            // 4. Android 10+ (API 29+), no se necesita permiso
+                            scope.launch(Dispatchers.IO) {
+                                val success = PdfGenerator.createOrderPdf(context, order)
+                                val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                                viewModel.showSnackbarMessage(message)
+                            }
+                        }
+                    },
                     modifier = Modifier.padding(paddingValues)
                 )
                 if (showSeatSheet) {
@@ -198,7 +261,8 @@ fun OrderDetailContent(
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
     onCancelPedido: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onDownloadPdf: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showPaymentDialog by remember { mutableStateOf(false) }
@@ -299,6 +363,27 @@ fun OrderDetailContent(
                     }
                 }
 
+                OrderStatus.COMPLETED -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Pedido ${order.status}",
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        // El nuevo botón
+                        Button(
+                            onClick = onDownloadPdf,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = "Descargar")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Descargar Recibo (PDF)")
+                        }
+                    }
+                }
+
                 else -> {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -365,6 +450,7 @@ fun OrderDetailScreenContent(
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
     onCancelPedido: (String) -> Unit,
+    onDownloadPdf: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -416,6 +502,7 @@ fun OrderDetailScreenContent(
                     onCancel = onCancel,
                     onPay = onPay,
                     onCancelPedido = onCancelPedido,
+                    onDownloadPdf = onDownloadPdf,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -571,7 +658,8 @@ fun OrderDetailScreenContentPreview_Content() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }
@@ -586,7 +674,8 @@ fun OrderDetailScreenContentPreview_Loading() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }
@@ -601,7 +690,8 @@ fun OrderDetailScreenContentPreview_Error() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }
