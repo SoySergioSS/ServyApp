@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,6 +25,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val properties = Properties()
+        val localPropertiesFile = project.rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.inputStream())
+        }
+
+        val geminiApiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -43,6 +55,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -73,6 +86,8 @@ dependencies {
     // implementation(libs.androidx.room.ktx) // Ya está o se puede agregar
     implementation("androidx.room:room-runtime:2.8.0")
     ksp("androidx.room:room-compiler:2.8.0")
+    // Gson para convertir objetos a JSON en Room
+    implementation("com.google.code.gson:gson:2.10.1")
 
     //hilt
     implementation(libs.dagger.hilt)
@@ -103,4 +118,7 @@ dependencies {
 
     //Pie Charts
     implementation("co.yml:ycharts:2.1.0")
+
+    // SDK de Google AI para Android (Gemini)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

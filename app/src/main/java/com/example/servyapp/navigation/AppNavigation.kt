@@ -40,6 +40,7 @@ import com.example.servyapp.ui.signup.SignupViewModel
 import com.example.servyapp.ui.splash.SplashScreen
 import com.example.servyapp.ui.start.StartScreen
 import com.example.servyapp.ui.stats.StatsScreen
+import com.example.servyapp.ui.chatbot.ChatbotScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -67,6 +68,7 @@ sealed class Screen(val route: String) {
 
     object VirtualWaiter : Screen("virtual_waiter")
     object Stats : Screen("stats")
+    object Chatbot : Screen("chatbot")
 }
 
 @Composable
@@ -175,9 +177,14 @@ fun AppNavigation(
                 }
 
                 HomeScreen(
-                    homeViewModel = hiltViewModel(), onProfileClick = {
+                    homeViewModel = hiltViewModel(),
+                    onProfileClick = {
                         navHostController.navigate(Screen.Profile.route)
-                    })
+                    },
+                    onChatbotClick = {
+                        navHostController.navigate(Screen.Chatbot.route)
+                    }
+                )
             }
 
             composable(route = Screen.Card.route) {
@@ -292,6 +299,10 @@ fun AppNavigation(
 
             composable(route = Screen.Stats.route) {
                 StatsScreen()
+            }
+
+            composable(route = Screen.Chatbot.route) {
+                ChatbotScreen()
             }
 
         }

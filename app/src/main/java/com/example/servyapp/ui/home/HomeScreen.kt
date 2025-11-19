@@ -1,6 +1,8 @@
 package com.example.servyapp.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +48,8 @@ import com.example.servyapp.ui.utils.AppLoading
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onChatbotClick: () -> Unit
 ) {
     val state by homeViewModel.uiState.collectAsState()
 
@@ -55,7 +59,8 @@ fun HomeScreen(
         onProfileClick = onProfileClick,
         onRestaurantClick = { restaurantId ->
             homeViewModel.saveSelectedRestaurant(restaurantId)
-        }
+        },
+        onChatbotClick = onChatbotClick
     )
 }
 
@@ -71,24 +76,44 @@ fun HomeScreenContent(
     state: HomeState,
     onProfileClick: () -> Unit,
     onRestaurantClick: (String) -> Unit,
+    onChatbotClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
+    // 1. Usamos Scaffold como el contenedor raíz
+    Scaffold(
+        modifier = modifier,
+
+        // 2. Movemos tu TopAppBar al slot 'topBar'
+        topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Restaurantes"
-                    )
+                    Text("Restaurantes")
                 }
             )
+        },
+
+        // 3. AÑADIMOS EL BOTÓN FLOTANTE AQUÍ
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onChatbotClick,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Chat,
+                    contentDescription = "Asistente Nutricional"
+                )
+            }
+        }
+    ) { innerPadding ->
+
+        // 4. Tu contenido original va aquí, dentro del 'padding' del Scaffold
         Box(
             modifier = Modifier
-                .weight(1f)
+                .padding(innerPadding) // Importante: respetar el padding del Scaffold
+                .fillMaxSize()
         ) {
             // El 'when' maneja los 3 estados: Carga, Error, Contenido
-
-            // Capturamos el errorMessage en una variable local
-            // para evitar el error de "Smart cast impossible"
             val errorMessage = state.errorMessage
 
             when {
@@ -123,7 +148,7 @@ fun HomeScreenContent(
                             RestaurantItem(
                                 restaurant = restaurant,
                                 onRestaurantClick = {
-                                    onRestaurantClick(restaurant.id) // Llama a la lambda
+                                    onRestaurantClick(restaurant.id)
                                 }
                             )
                         }
@@ -203,7 +228,8 @@ fun HomeScreenContentPreview_WithData() {
         HomeScreenContent(
             state = HomeState(isLoading = false, restaurants = previewRestaurants),
             onProfileClick = {},
-            onRestaurantClick = {}
+            onRestaurantClick = {},
+            onChatbotClick = {}
         )
     }
 }
@@ -215,7 +241,8 @@ fun HomeScreenContentPreview_Loading() {
         HomeScreenContent(
             state = HomeState(isLoading = true),
             onProfileClick = {},
-            onRestaurantClick = {}
+            onRestaurantClick = {},
+            onChatbotClick = {}
         )
     }
 }
@@ -227,7 +254,8 @@ fun HomeScreenContentPreview_Error() {
         HomeScreenContent(
             state = HomeState(isLoading = false, errorMessage = "No se pudo conectar al servidor."),
             onProfileClick = {},
-            onRestaurantClick = {}
+            onRestaurantClick = {},
+            onChatbotClick = {}
         )
     }
 }
@@ -239,7 +267,8 @@ fun HomeScreenContentPreview_Empty() {
         HomeScreenContent(
             state = HomeState(isLoading = false, restaurants = emptyList()),
             onProfileClick = {},
-            onRestaurantClick = {}
+            onRestaurantClick = {},
+            onChatbotClick = {}
         )
     }
 }

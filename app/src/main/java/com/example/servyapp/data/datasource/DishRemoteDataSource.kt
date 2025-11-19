@@ -52,4 +52,23 @@ class DishRemoteDataSource @Inject constructor(
             Result.failure(e)
         }
     }
+
+    // Busca platillos por nombre en TODOS los restaurantes
+    suspend fun searchDishesByName(query: String): Result<List<Dish>> {
+        return try {
+            val snapshot = firestore.collectionGroup("dishes")
+                .whereGreaterThanOrEqualTo("name", query)
+                .whereLessThanOrEqualTo("name", query + "\uf8ff")
+                .limit(5) // Limitamos para no gastar muchos recursos
+                .get()
+                .await()
+
+            val dishes = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Dish::class.java)?.copy(id = doc.id)
+            }
+            Result.success(dishes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
