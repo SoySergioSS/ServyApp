@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.servyapp.data.repository.AnalyticsRepository
 import com.example.servyapp.data.repository.CardRepository
 import com.example.servyapp.data.repository.PedidoRepository
+import com.example.servyapp.data.repository.RestaurantRepository
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import com.google.firebase.auth.FirebaseAuth
@@ -19,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val pedidoRepository: PedidoRepository,
+    private val restaurantRepository: RestaurantRepository,
     private val cardRepository: CardRepository,
     private val auth: FirebaseAuth,
     private val analyticsRepository: AnalyticsRepository
@@ -90,10 +92,54 @@ class OrderDetailViewModel @Inject constructor(
             // 4. Compara los IDs
             if (scannedRestaurantId != null && scannedRestaurantId == orderRestaurantId) {
                 // coincide
-                updateStatus(OrderStatus.IN_PROGRESS, "¡Orden confirmada exitosamente!")
-            } else {
-                // no coincide
-                _uiState.update { it.copy(isLoading = false, errorMessage = "QR Incorrecto. Esta orden no pertenece a este restaurante.") }
+
+
+                val assigned = restaurantRepository.assignTableSecure(
+                    restaurantId = orderRestaurantId!!,
+                    requiredSeats = order.requiredSeats,
+                    orderId = order.id
+                )
+
+                if (assigned == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "No hay mesas disponibles en este momento."
+                        )
+                    }
+                    return@launch
+                }
+
+                val updated = restaurantRepository.updateOrderWithTable(
+                    orderId = order.id,
+                    restaurantId = orderRestaurantId,
+                    tableId = assigned.id,
+                    tableNumber = assigned.number
+                )
+
+                if (!updated) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "No se pudo asignar la mesa."
+                        )
+                    }
+                    return@launch
+                }
+
+
+                updateStatus(
+                    OrderStatus.IN_PROGRESS,
+                    "¡Orden confirmada exitosamente! Mesa asignada: ${assigned.number}"
+                )
+            }else {
+                // QR no coincide
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "QR Incorrecto. Esta orden no pertenece a este restaurante."
+                    )
+                }
             }
         }
     }
@@ -106,9 +152,16 @@ class OrderDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = auth.currentUser?.uid ?: return@launch
 
+
             pedidoRepository.updatePaymentMethod(orderId, "Efectivo", userId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
+
             reloadOrder(orderId, userId)
+
+            // liberar mesa usando solo orderId
+            val released = restaurantRepository.releaseTable(orderId)
+            Log.e("PAYMENT", "Mesa liberada: $released")
+
 
             _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
@@ -125,6 +178,11 @@ class OrderDetailViewModel @Inject constructor(
             pedidoRepository.updatePaymentMethod(orderId, "Yape/Plin", userId)
             pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
             reloadOrder(orderId, userId)
+
+
+            // liberar mesa usando solo orderId
+            val released = restaurantRepository.releaseTable(orderId)
+            Log.e("PAYMENT", "Mesa liberada: $released")
 
             _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
@@ -143,6 +201,11 @@ class OrderDetailViewModel @Inject constructor(
                 pedidoRepository.updatePaymentMethod(orderId, "Tarjeta", userId)
                 pedidoRepository.updateOrderStatus(orderId, OrderStatus.COMPLETED, userId)
                 reloadOrder(orderId, userId)
+
+
+                // liberar mesa usando solo orderId
+                val released = restaurantRepository.releaseTable(orderId)
+                Log.e("PAYMENT", "Mesa liberada: $released")
 
                 _uiState.value.order?.let { updateUserAnalytics(it, userId) }
 
@@ -255,4 +318,15 @@ class OrderDetailViewModel @Inject constructor(
             }
         }
     }
+    fun setRequiredSeats(seats: Int) {
+        _uiState.update { it.copy(order = it.order?.copy(requiredSeats = seats)) }
+    }
+
+    fun showSnackbarMessage(message: String) {
+        _uiState.update { it.copy(successMessage = message) }
+    }
+
 }
+
+
+

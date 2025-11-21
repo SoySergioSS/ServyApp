@@ -14,8 +14,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.example.servyapp.ui.utils.PdfGenerator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,22 +39,27 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -57,6 +76,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderDetailScreen(
@@ -69,11 +89,37 @@ fun OrderDetailScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var showSeatSheet by remember { mutableStateOf(false) }
+
+    var requiredSeats by remember { mutableStateOf(1) } // valor inicial 1 asiento
+
     val qrScannerLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
             viewModel.validateQrAndConfirmOrder(result.contents)
         } else {
             viewModel.clearMessages()
+        }
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permiso concedido, generar PDF
+            scope.launch(Dispatchers.IO) {
+                val order = viewModel.uiState.value.order
+                if (order != null) {
+                    val success = PdfGenerator.createOrderPdf(context, order)
+                    val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                    viewModel.showSnackbarMessage(message)
+                }
+            }
+        } else {
+            // Permiso denegado
+            viewModel.showSnackbarMessage("Permiso de almacenamiento denegado")
         }
     }
 
@@ -142,11 +188,7 @@ fun OrderDetailScreen(
                 OrderDetailContent(
                     order = order,
                     onConfirm = {
-                        val options = ScanOptions()
-                        options.setPrompt("Escanea el QR del restaurante")
-                        options.setBeepEnabled(true)
-                        options.setOrientationLocked(false)
-                        qrScannerLauncher.launch(options)
+                        showSeatSheet = true
                     },
                     onCancel = { viewModel.cancelOrder() },
                     onPay = { method ->
@@ -159,8 +201,51 @@ fun OrderDetailScreen(
                     onCancelPedido = { pedidoId ->
                         viewModel.cancelPedido(pedidoId)
                     },
+                    onDownloadPdf = {
+                        // 1. Revisar versión de Android
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                            val permission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
+                            if (permission == PackageManager.PERMISSION_GRANTED) {
+                                // 3a. Permiso OK, generar PDF
+                                scope.launch(Dispatchers.IO) {
+                                    val success = PdfGenerator.createOrderPdf(context, order)
+                                    val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                                    viewModel.showSnackbarMessage(message)
+                                }
+                            } else {
+                                // 3b. Pedir permiso
+                                permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        } else {
+                            // 4. Android 10+ (API 29+), no se necesita permiso
+                            scope.launch(Dispatchers.IO) {
+                                val success = PdfGenerator.createOrderPdf(context, order)
+                                val message = if (success) "PDF guardado en Descargas" else "Error al guardar PDF"
+                                viewModel.showSnackbarMessage(message)
+                            }
+                        }
+                    },
                     modifier = Modifier.padding(paddingValues)
                 )
+                if (showSeatSheet) {
+                    SeatSelectionBottomSheet(
+                        requiredSeats = requiredSeats,
+                        onSeatsChange = { requiredSeats = it },
+                        onConfirm = {
+                            showSeatSheet = false
+                            viewModel.setRequiredSeats(requiredSeats)
+
+                            val options = ScanOptions()
+                            options.setPrompt("Escanea el QR del restaurante")
+                            options.setBeepEnabled(true)
+                            options.setOrientationLocked(false)
+                            qrScannerLauncher.launch(options)
+                        },
+                        onDismiss = { showSeatSheet = false }
+                    )
+                }
             }
         }
     }
@@ -176,7 +261,8 @@ fun OrderDetailContent(
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
     onCancelPedido: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onDownloadPdf: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showPaymentDialog by remember { mutableStateOf(false) }
@@ -277,6 +363,27 @@ fun OrderDetailContent(
                     }
                 }
 
+                OrderStatus.COMPLETED -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Pedido ${order.status}",
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        // El nuevo botón
+                        Button(
+                            onClick = onDownloadPdf,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = "Descargar")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Descargar Recibo (PDF)")
+                        }
+                    }
+                }
+
                 else -> {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -343,6 +450,7 @@ fun OrderDetailScreenContent(
     onCancel: () -> Unit,
     onPay: (PaymentMethod) -> Unit,
     onCancelPedido: (String) -> Unit,
+    onDownloadPdf: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -394,6 +502,7 @@ fun OrderDetailScreenContent(
                     onCancel = onCancel,
                     onPay = onPay,
                     onCancelPedido = onCancelPedido,
+                    onDownloadPdf = onDownloadPdf,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -412,6 +521,71 @@ fun OrderDetailScreenContent(
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SeatSelectionBottomSheet(
+    initialSeats: Int = 1,
+    requiredSeats: Int,
+    onSeatsChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+    var seatText by remember { mutableStateOf(initialSeats.toString()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Número de Personas",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            OutlinedTextField(
+                value = seatText,
+                onValueChange = { newText ->
+                    // Solo permitir números
+                    if (newText.all { it.isDigit() }) {
+                        seatText = newText
+                    }
+                },
+                label = { Text("Asientos requeridos") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    val seats = seatText.toIntOrNull() ?: 1
+                    onSeatsChange(seats)
+                    onConfirm()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Escanear QR y Confirmar")
+            }
+
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancelar")
+            }
+        }
+    }
+
+}
 
 /* ----------------------------
    Datos de prueba para preview
@@ -484,7 +658,8 @@ fun OrderDetailScreenContentPreview_Content() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }
@@ -499,7 +674,8 @@ fun OrderDetailScreenContentPreview_Loading() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }
@@ -514,7 +690,8 @@ fun OrderDetailScreenContentPreview_Error() {
             onConfirm = {},
             onCancel = {},
             onPay = {},
-            onCancelPedido = {}
+            onCancelPedido = {},
+            onDownloadPdf = {}
         )
     }
 }

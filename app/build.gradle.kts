@@ -58,6 +58,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.foundation)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -66,6 +68,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Room Database
+    // implementation(libs.androidx.room.ktx) // Ya está o se puede agregar
+    implementation("androidx.room:room-runtime:2.8.0")
+    ksp("androidx.room:room-compiler:2.8.0")
 
     //hilt
     implementation(libs.dagger.hilt)
