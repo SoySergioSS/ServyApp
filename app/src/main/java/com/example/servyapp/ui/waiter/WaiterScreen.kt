@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -12,7 +13,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
@@ -49,6 +52,7 @@ fun VoiceAssistantScreen(
     val visualItems = viewModel.visualItems
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
+    val currentPhase = viewModel.currentPhase
 
     // --- Lógica de Audio (TTS / STT) ---
     val ttsEngine = rememberTextToSpeech(context)
@@ -162,40 +166,57 @@ fun VoiceAssistantScreen(
                 }
             }
 
-            // 2. Área Visual (Grilla de Resultados)
-            if (visualItems.isNotEmpty()) {
-                Text(
-                    text = "Opciones Disponibles",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    fontWeight = FontWeight.Bold
-                )
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(visualItems) { item ->
-                        VisualItemCard(item = item) {
-                            viewModel.onVisualItemClicked(item)
-                        }
-                    }
-                }
-            } else if (isLoading) {
+            // 2. ÁREA DE CONTENIDO DINÁMICO (AQUÍ ESTÁ EL CAMBIO)
+            if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Restaurant,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.surfaceVariant
-                    )
+                // Decidimos qué mostrar según la fase que envía el Backend
+                when (currentPhase) {
+                    "summary" -> {
+                        // MOSTRAR VISTA DE RESUMEN DE PEDIDO
+                        OrderSummaryView(
+                            items = visualItems,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    else -> {
+                        // MOSTRAR VISTA DE GRILLA (Restaurantes / Platos)
+                        // Esta es la lógica que ya tenías, envuelta en el else
+                        if (visualItems.isNotEmpty()) {
+                            Text(
+                                text = if (currentPhase == "restaurants") "Restaurantes" else "Menú Disponible",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                items(visualItems) { item ->
+                                    VisualItemCard(item = item) {
+                                        viewModel.onVisualItemClicked(item)
+                                    }
+                                }
+                            }
+                        } else {
+                            // Estado vacío por defecto
+                            Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Restaurant,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -281,6 +302,100 @@ fun VisualItemCard(item: VisualItem, onClick: () -> Unit) {
                     color = Color.LightGray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+// --- NUEVO COMPOSABLE: VISTA DE RESUMEN ---
+@Composable
+fun OrderSummaryView(
+    items: List<VisualItem>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Resumen de tu Pedido",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (items.isEmpty()) {
+            Text("Tu carrito está vacío por ahora.")
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(items.size) { index ->
+                    val item = items[index]
+                    OrderItemRow(item)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Botón visual de "Listo" (Aunque la IA ya lo confirma verbalmente)
+        Button(
+            onClick = { /* Acción opcional, ej: ir a QR */ },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Icon(Icons.Default.CheckCircle, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Ir a Mi Orden / Escanear QR")
+        }
+    }
+}
+
+@Composable
+fun OrderItemRow(item: VisualItem) {
+    Card(
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Asumimos que el backend envía la imagen pequeña o un icono genérico
+            AsyncImage(
+                model = "https://picsum.photos/seed/${item.imageSeed}/100/100",
+                contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title, // Ej: "Ramen Tonkotsu"
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = item.subtitle, // Ej: "Cantidad: 2" o "$16.00"
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

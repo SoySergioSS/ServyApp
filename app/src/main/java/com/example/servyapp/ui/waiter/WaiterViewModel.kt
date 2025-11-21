@@ -108,10 +108,12 @@ class WaiterViewModel : ViewModel() {
                 response.screenData?.let { data ->
                     currentPhase = data.phase
                     visualItems = data.items
-                    Log.d("ChatDebug", "UI Actualizada: ${data.items.size} items")
+                    Log.d("ChatDebug", "UI Actualizada ${data.phase}: ${data.items.size} items")
                 }
 
                 Log.d("Historial", _history.toString())
+
+                Log.d("ScreenData", response.screenData.toString())
 
             } catch (e: Exception) {
                 errorMessage = e.message ?: "Error de conexión"
