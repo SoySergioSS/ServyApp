@@ -244,8 +244,13 @@ fun VisualItemCard(item: VisualItem, onClick: () -> Unit) {
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Imagen de Fondo (Usamos Picsum con seed para consistencia, igual que en web)
+            val modelUrl = if (item.imageSeed.startsWith("http")){
+                item.imageSeed
+            } else {
+                "https://picsum.photos/seed/${item.imageSeed}/300/300"
+            }
             AsyncImage(
-                model = "https://picsum.photos/seed/${item.imageSeed}/300/300",
+                model = modelUrl,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
