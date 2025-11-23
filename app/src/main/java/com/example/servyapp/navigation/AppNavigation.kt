@@ -1,6 +1,8 @@
 package com.example.servyapp.navigation
 
 import VoiceAssistantScreen
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +73,7 @@ sealed class Screen(val route: String) {
     object Chatbot : Screen("chatbot")
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun AppNavigation(
     navHostController: NavHostController
@@ -298,7 +301,7 @@ fun AppNavigation(
             }
 
             composable(route = Screen.Stats.route) {
-                StatsScreen()
+                StatsScreen(viewModel = hiltViewModel())
             }
 
             composable(route = Screen.Chatbot.route) {

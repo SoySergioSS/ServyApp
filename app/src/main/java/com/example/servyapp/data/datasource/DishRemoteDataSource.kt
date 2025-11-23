@@ -71,4 +71,21 @@ class DishRemoteDataSource @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun getDishesByRestaurant(restaurantId: String): Result<List<Dish>> {
+        return try {
+            val snapshot = firestore.collection("restaurants")
+                .document(restaurantId)
+                .collection("dishes")
+                .get()
+                .await()
+
+            val dishes = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Dish::class.java)?.copy(id = doc.id)
+            }
+            Result.success(dishes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

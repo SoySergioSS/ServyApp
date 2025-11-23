@@ -83,7 +83,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // Room Database
-    // implementation(libs.androidx.room.ktx) // Ya está o se puede agregar
+    // implementation(libs.androidx.room.ktx) // Ya está
     implementation("androidx.room:room-runtime:2.8.0")
     ksp("androidx.room:room-compiler:2.8.0")
     // Gson para convertir objetos a JSON en Room

@@ -81,7 +81,7 @@ import java.util.Locale
 @Composable
 fun OrderDetailScreen(
     orderId: String,
-    viewModel: OrderDetailViewModel = hiltViewModel(),
+    viewModel: OrderDetailViewModel,
     onBackClick: () -> Unit,
     onNavigateToCard: () -> Unit
 ) {
@@ -153,7 +153,7 @@ fun OrderDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle del Pedido") },
+                title = { Text("Detalle de la orden") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -372,7 +372,6 @@ fun OrderDetailContent(
                             "Pedido ${order.status}",
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
-                        // El nuevo botón
                         Button(
                             onClick = onDownloadPdf,
                             modifier = Modifier.fillMaxWidth()
@@ -457,7 +456,7 @@ fun OrderDetailScreenContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Detalle del Pedido") },
+                title = { Text("Detalle de la orden") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
