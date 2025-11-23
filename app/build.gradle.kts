@@ -121,4 +121,7 @@ dependencies {
 
     // SDK de Google AI para Android (Gemini)
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Librería para renderizar Markdown
+    implementation("com.github.jeziellago:compose-markdown:0.5.0")
 }
