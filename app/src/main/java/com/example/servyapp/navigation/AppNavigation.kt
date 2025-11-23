@@ -3,15 +3,11 @@ package com.example.servyapp.navigation
 import VoiceAssistantScreen
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -23,17 +19,19 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.servyapp.ui.cart.CartScreen
 import com.example.servyapp.ui.cart.CartViewModel
+import com.example.servyapp.ui.chatbot.ChatbotScreen
 import com.example.servyapp.ui.components.BottomNavigationBar
+import com.example.servyapp.ui.dishdetail.DishDetailScreen
+import com.example.servyapp.ui.dishdetail.DishDetailViewModel
 import com.example.servyapp.ui.dishes.DishesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
-import com.example.servyapp.ui.orders.OrdersScreen
-import com.example.servyapp.ui.dishdetail.DishDetailViewModel
-import com.example.servyapp.ui.dishdetail.DishDetailScreen
+import com.example.servyapp.ui.minigame.MazeGameScreen
 import com.example.servyapp.ui.orderdetail.OrderDetailScreen
 import com.example.servyapp.ui.orderdetail.OrderDetailViewModel
+import com.example.servyapp.ui.orders.OrdersScreen
 import com.example.servyapp.ui.profile.ProfileScreen
 import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
@@ -42,7 +40,6 @@ import com.example.servyapp.ui.signup.SignupViewModel
 import com.example.servyapp.ui.splash.SplashScreen
 import com.example.servyapp.ui.start.StartScreen
 import com.example.servyapp.ui.stats.StatsScreen
-import com.example.servyapp.ui.chatbot.ChatbotScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -230,13 +227,6 @@ fun AppNavigation(
                     navArgument("restaurantId") { type = NavType.StringType },
                     navArgument("dishId") { type = NavType.StringType })) {
                 val dishDetailViewModel: DishDetailViewModel = hiltViewModel()
-                val state by dishDetailViewModel.uiState.collectAsState()
-//            LaunchedEffect(state.navigateToCart) {
-//                if(state.navigateToCart){
-//                    navHostController.navigate(Screen.Cart.route)
-//                    dishDetailViewModel.navigationToCartComplete()
-//                }
-//            }
                 DishDetailScreen(viewModel = dishDetailViewModel, onBackClick = {
                     navHostController.popBackStack()
                 }, onCartClick = {
@@ -295,12 +285,11 @@ fun AppNavigation(
             }
 
             composable(route = Screen.VirtualWaiter.route) {
-//                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//                    Text(text = "Hola")
-//                }
-                VoiceAssistantScreen(onBackClick = {
+                VoiceAssistantScreen(
+                    onBackClick = {
                     navHostController.popBackStack()
-                })
+                    }
+                )
             }
 
             composable(route = Screen.Stats.route) {
@@ -312,11 +301,11 @@ fun AppNavigation(
             }
 
             composable(route = Screen.Minigame.route) {
-                // Aquí pondremos MazeGameScreen() más adelante
-                // Por ahora, un texto temporal para probar el botón
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Aquí irá el Laberinto")
-                }
+                MazeGameScreen(
+                    onNavigateBack = {
+                        navHostController.popBackStack()
+                    }
+                )
             }
 
         }
