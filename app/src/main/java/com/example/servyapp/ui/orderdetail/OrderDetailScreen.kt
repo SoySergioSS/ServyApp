@@ -1,6 +1,11 @@
 package com.example.servyapp.ui.orderdetail
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,24 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import com.example.servyapp.ui.utils.PdfGenerator
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,21 +52,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.content.ContextCompat
 import com.example.servyapp.domain.model.Order
 import com.example.servyapp.domain.model.OrderStatus
 import com.example.servyapp.domain.model.Pedido
 import com.example.servyapp.domain.model.PedidoItem
 import com.example.servyapp.domain.model.PedidoStatus
 import com.example.servyapp.ui.theme.ServyAppTheme
+import com.example.servyapp.ui.utils.PdfGenerator
 import com.google.firebase.Timestamp
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -83,7 +81,8 @@ fun OrderDetailScreen(
     orderId: String,
     viewModel: OrderDetailViewModel,
     onBackClick: () -> Unit,
-    onNavigateToCard: () -> Unit
+    onNavigateToCard: () -> Unit,
+    onNavigateToMinigame: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -227,6 +226,7 @@ fun OrderDetailScreen(
                             }
                         }
                     },
+                    onNavigateToMinigame = onNavigateToMinigame,
                     modifier = Modifier.padding(paddingValues)
                 )
                 if (showSeatSheet) {
@@ -263,6 +263,7 @@ fun OrderDetailContent(
     onCancelPedido: (String) -> Unit,
     onDownloadPdf: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToMinigame: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showPaymentDialog by remember { mutableStateOf(false) }
@@ -355,11 +356,21 @@ fun OrderDetailContent(
                 }
 
                 OrderStatus.IN_PROGRESS -> {
-                    Button(
-                        onClick = { showPaymentDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Pagar")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { showPaymentDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Pagar")
+                        }
+
+                        // --- NUEVO BOTÓN DE MINIJUEGO ---
+                        OutlinedButton(
+                            onClick = onNavigateToMinigame,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("¡Juega mientras esperas!")
+                        }
                     }
                 }
 
@@ -450,6 +461,7 @@ fun OrderDetailScreenContent(
     onPay: (PaymentMethod) -> Unit,
     onCancelPedido: (String) -> Unit,
     onDownloadPdf: () -> Unit,
+    onNavigateToMinigame: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -502,6 +514,7 @@ fun OrderDetailScreenContent(
                     onPay = onPay,
                     onCancelPedido = onCancelPedido,
                     onDownloadPdf = onDownloadPdf,
+                    onNavigateToMinigame = onNavigateToMinigame,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -658,7 +671,8 @@ fun OrderDetailScreenContentPreview_Content() {
             onCancel = {},
             onPay = {},
             onCancelPedido = {},
-            onDownloadPdf = {}
+            onDownloadPdf = {},
+            onNavigateToMinigame = {}
         )
     }
 }
@@ -674,7 +688,8 @@ fun OrderDetailScreenContentPreview_Loading() {
             onCancel = {},
             onPay = {},
             onCancelPedido = {},
-            onDownloadPdf = {}
+            onDownloadPdf = {},
+            onNavigateToMinigame = {}
         )
     }
 }
@@ -690,7 +705,8 @@ fun OrderDetailScreenContentPreview_Error() {
             onCancel = {},
             onPay = {},
             onCancelPedido = {},
-            onDownloadPdf = {}
+            onDownloadPdf = {},
+            onNavigateToMinigame = {}
         )
     }
 }

@@ -19,8 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatbotViewModel @Inject constructor(
     private val dishRepository: DishRepository,
-    private val restaurantRepository: RestaurantRepository,
-    private val userRepository: UserRepository
+    private val restaurantRepository: RestaurantRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatbotState())

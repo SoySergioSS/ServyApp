@@ -71,6 +71,7 @@ sealed class Screen(val route: String) {
     object VirtualWaiter : Screen("virtual_waiter")
     object Stats : Screen("stats")
     object Chatbot : Screen("chatbot")
+    object Minigame : Screen("minigame")
 }
 
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -288,7 +289,9 @@ fun AppNavigation(
                     onBackClick = { navHostController.popBackStack() },
                     onNavigateToCard = {
                         navHostController.navigate(Screen.Card.route)
-                    })
+                    },
+                    onNavigateToMinigame = { navHostController.navigate(Screen.Minigame.route) }
+                )
             }
 
             composable(route = Screen.VirtualWaiter.route) {
@@ -306,6 +309,14 @@ fun AppNavigation(
 
             composable(route = Screen.Chatbot.route) {
                 ChatbotScreen()
+            }
+
+            composable(route = Screen.Minigame.route) {
+                // Aquí pondremos MazeGameScreen() más adelante
+                // Por ahora, un texto temporal para probar el botón
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Aquí irá el Laberinto")
+                }
             }
 
         }
