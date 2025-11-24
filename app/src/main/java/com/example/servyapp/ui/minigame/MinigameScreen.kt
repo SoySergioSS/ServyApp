@@ -27,12 +27,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun MazeGameScreen(
     viewModel: MazeGameViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit // Para volver al pedido al ganar
+    onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // --- LÓGICA DEL SENSOR ---
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -40,35 +39,33 @@ fun MazeGameScreen(
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event != null) {
-                    // values[0] = Eje X, values[1] = Eje Y
                     viewModel.updateBallPosition(event.values[0], event.values[1])
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        // SENSOR_DELAY_GAME es la velocidad ideal para juegos
         sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
 
         onDispose {
             sensorManager.unregisterListener(listener)
         }
     }
-    // -------------------------
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.DarkGray) // Fondo del tablero
+            .background(Color.DarkGray)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar
+            // Top Bar con botón de volver
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0x80000000))
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
                     text = "Nivel: ${state.currentLevel}",
@@ -82,6 +79,12 @@ fun MazeGameScreen(
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
+                Button(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Volver", fontSize = 14.sp)
+                }
             }
 
             Box(
@@ -89,19 +92,18 @@ fun MazeGameScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .onSizeChanged { size ->
-                        // Avisamos al ViewModel del tamaño de pantalla para construir los muros
                         viewModel.initGame(size.width.toFloat(), size.height.toFloat())
                     }
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // 1. Dibujar la Meta (Cuadrado Verde)
+                    // Meta
                     drawRect(
                         color = Color(0xFF4CAF50),
                         topLeft = Offset(state.goal.left, state.goal.top),
                         size = Size(state.goal.width, state.goal.height)
                     )
 
-                    // 2. Dibujar Paredes (Muros Blancos)
+                    // Paredes
                     state.walls.forEach { rect ->
                         drawRect(
                             color = Color.White,
@@ -110,7 +112,7 @@ fun MazeGameScreen(
                         )
                     }
 
-                    // 3. Dibujar Trampas (Rojo semitransparente)
+                    // Trampas
                     state.traps.forEach { rect ->
                         drawRect(
                             color = Color(0x80FF0000),
@@ -119,19 +121,18 @@ fun MazeGameScreen(
                         )
                     }
 
-                    // 4. Dibujar la Bola (Círculo Rojo)
+                    // Bola
                     drawCircle(
                         color = Color(0xFFF44336),
                         radius = state.ballRadius,
                         center = Offset(state.ballPosition.first, state.ballPosition.second)
                     )
                 }
-
             }
         }
     }
 
-    // Diálogo de Victoria / Fin de Nivel
+    // Diálogo de Victoria
     if (state.hasWon) {
         AlertDialog(
             onDismissRequest = {},
