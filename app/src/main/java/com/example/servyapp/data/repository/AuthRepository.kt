@@ -1,8 +1,6 @@
 package com.example.servyapp.data.repository
 
 import com.example.servyapp.data.datasource.AuthRemoteDataSource
-import com.example.servyapp.data.datasource.UserRemoteDataSource
-import com.example.servyapp.domain.model.User
 import com.google.firebase.auth.FirebaseUser
 import javax.inject.Inject
 import javax.inject.Singleton

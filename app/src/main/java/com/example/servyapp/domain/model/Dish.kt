@@ -9,5 +9,14 @@ data class Dish(
     val price: Double = 0.0,
     val imageURL: String = "",
     val enable: Boolean = true,
-    val category: String = ""
+    val category: String = "",
+    val nutrition: NutritionInfo?=null
+)
+
+data class NutritionInfo(
+    val calories: Int = 0,
+    val protein: Double = 0.0,
+    val fat: Double = 0.0,
+    val carbs: Double = 0.0,
+    val allergens: List<String> = emptyList() //["gluten", "lactosa"]
 )

@@ -19,4 +19,9 @@ class DishRepository @Inject constructor(
     fun getDishesFromRestaurant(restaurantId: String): Flow<Result<List<Dish>>> =
         dishRemoteDataSource.getDishesFromRestaurant(restaurantId)
 
+    suspend fun searchDishesByName(query: String): Result<List<Dish>> =
+        dishRemoteDataSource.searchDishesByName(query)
+
+    suspend fun getDishesByRestaurant(restaurantId: String): Result<List<Dish>> =
+        dishRemoteDataSource.getDishesByRestaurant(restaurantId)
 }

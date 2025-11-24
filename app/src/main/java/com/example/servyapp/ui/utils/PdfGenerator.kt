@@ -15,7 +15,6 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// Objeto singleton para generar PDFs
 object PdfGenerator {
 
     // Constantes para el layout del PDF
@@ -74,7 +73,7 @@ object PdfGenerator {
             yPos += LINE_HEIGHT * 2
 
             order.pedidos.forEach { pedido ->
-                drawText("Restaurante: ${pedido.restaurantName}", 0f, yPos, headerPaint) // Asumimos que tienes 'restaurantName'
+                drawText("Restaurante: ${pedido.restaurantName}", 0f, yPos, headerPaint)
                 yPos += LINE_HEIGHT + LINE_SPACING
 
                 // Encabezados de tabla
