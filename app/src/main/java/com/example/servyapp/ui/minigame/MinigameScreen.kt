@@ -7,12 +7,14 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -20,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.DisposableEffect
+
 
 @Composable
 fun MazeGameScreen(
@@ -57,48 +61,93 @@ fun MazeGameScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.DarkGray) // Fondo del tablero
-            .onSizeChanged { size ->
-                // Avisamos al ViewModel del tamaño de pantalla para construir los muros
-                viewModel.initGame(size.width.toFloat(), size.height.toFloat())
-            }
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            // 1. Dibujar la Meta (Cuadrado Verde)
-            drawRect(
-                color = Color(0xFF4CAF50),
-                topLeft = Offset(state.goal.left, state.goal.top),
-                size = Size(state.goal.width, state.goal.height)
-            )
-
-            // 2. Dibujar Paredes (Muros Blancos)
-            state.walls.forEach { rect ->
-                drawRect(
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0x80000000))
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Nivel: ${state.currentLevel}",
                     color = Color.White,
-                    topLeft = Offset(rect.left, rect.top),
-                    size = Size(rect.width, rect.height)
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = "Tiempo: ${state.timeElapsed / 1000}s",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
                 )
             }
 
-            // 3. Dibujar la Bola (Círculo Rojo)
-            drawCircle(
-                color = Color(0xFFF44336),
-                radius = state.ballRadius,
-                center = Offset(state.ballPosition.first, state.ballPosition.second)
-            )
-        }
-
-        // Diálogo de Victoria
-        if (state.hasWon) {
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text(text = "¡Felicidades!") },
-                text = { Text(text = "Has completado el laberinto. ¡Tu orden ya debe estar lista!") },
-                confirmButton = {
-                    Button(onClick = onNavigateBack) {
-                        Text("Volver")
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .onSizeChanged { size ->
+                        // Avisamos al ViewModel del tamaño de pantalla para construir los muros
+                        viewModel.initGame(size.width.toFloat(), size.height.toFloat())
                     }
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    // 1. Dibujar la Meta (Cuadrado Verde)
+                    drawRect(
+                        color = Color(0xFF4CAF50),
+                        topLeft = Offset(state.goal.left, state.goal.top),
+                        size = Size(state.goal.width, state.goal.height)
+                    )
+
+                    // 2. Dibujar Paredes (Muros Blancos)
+                    state.walls.forEach { rect ->
+                        drawRect(
+                            color = Color.White,
+                            topLeft = Offset(rect.left, rect.top),
+                            size = Size(rect.width, rect.height)
+                        )
+                    }
+
+                    // 3. Dibujar la Bola (Círculo Rojo)
+                    drawCircle(
+                        color = Color(0xFFF44336),
+                        radius = state.ballRadius,
+                        center = Offset(state.ballPosition.first, state.ballPosition.second)
+                    )
                 }
-            )
+
+            }
         }
+    }
+
+    // Diálogo de Victoria / Fin de Nivel
+    if (state.hasWon) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(text = "¡Nivel Completado!") },
+            text = { Text(text = "Tiempo: ${state.timeElapsed / 1000} segundos") },
+            confirmButton = {
+                Button(onClick = { viewModel.nextLevel() }) {
+                    Text("Siguiente Nivel")
+                }
+            }
+        )
+    }
+
+    // Diálogo de Fin del Juego
+    if (state.isGameOver) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(text = "¡Juego Terminado!") },
+            text = { Text(text = "Has completado todos los niveles. ¡Tu orden está lista!") },
+            confirmButton = {
+                Button(onClick = onNavigateBack) {
+                    Text("Volver al Pedido")
+                }
+            }
+        )
     }
 }

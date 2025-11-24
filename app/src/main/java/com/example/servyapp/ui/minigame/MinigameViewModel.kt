@@ -6,6 +6,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 
 @HiltViewModel
@@ -17,6 +21,9 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
     private var screenWidth = 0f
     private var screenHeight = 0f
     private var isInitialized = false
+    
+    private var timerJob: Job? = null
+    private var startTime = 0L
 
     // Se llama cuando la pantalla carga para definir el tamaño del laberinto
     fun initGame(width: Float, height: Float) {
@@ -24,33 +31,84 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
         screenWidth = width
         screenHeight = height
         isInitialized = true
+        
+        loadLevel(1)
+    }
 
-        // CONFIGURACIÓN DEL NIVEL
+    private fun loadLevel(level: Int) {
         val wallThickness = 25f
-        val walls = mutableListOf(
-            // Marco exterior
-            Rect(0f, 0f, width, wallThickness), // Arriba
-            Rect(0f, 0f, wallThickness, height), // Izquierda
-            Rect(width - wallThickness, 0f, width, height), // Derecha
-            Rect(0f, height - wallThickness, width, height), // Abajo
+        val walls = mutableListOf<Rect>()
+        var goal = Rect.Zero
+        var startPos = Pair(100f, 100f)
 
-            // Paredes internas (Obstáculos)
-            Rect(width * 0.2f, 0f, width * 0.25f, height * 0.6f),
-            Rect(width * 0.5f, height * 0.3f, width * 0.55f, height),
-            Rect(width * 0.75f, 0f, width * 0.8f, height * 0.7f)
-        )
+        // Marco exterior (siempre igual)
+        walls.add(Rect(0f, 0f, screenWidth, wallThickness)) // Arriba
+        walls.add(Rect(0f, 0f, wallThickness, screenHeight)) // Izquierda
+        walls.add(Rect(screenWidth - wallThickness, 0f, screenWidth, screenHeight)) // Derecha
+        walls.add(Rect(0f, screenHeight - wallThickness, screenWidth, screenHeight)) // Abajo
 
-        // Meta en la esquina inferior derecha
-        val goal = Rect(width - 180f, height - 180f, width - 50f, height - 50f)
+        when (level) {
+            1 -> {
+                // Nivel 1: Fácil
+                walls.add(Rect(screenWidth * 0.2f, 0f, screenWidth * 0.25f, screenHeight * 0.6f))
+                walls.add(Rect(screenWidth * 0.5f, screenHeight * 0.3f, screenWidth * 0.55f, screenHeight))
+                walls.add(Rect(screenWidth * 0.75f, 0f, screenWidth * 0.8f, screenHeight * 0.7f))
+                goal = Rect(screenWidth - 180f, screenHeight - 180f, screenWidth - 50f, screenHeight - 50f)
+            }
+            2 -> {
+                // Nivel 2: Medio
+                walls.add(Rect(0f, screenHeight * 0.2f, screenWidth * 0.6f, screenHeight * 0.25f))
+                walls.add(Rect(screenWidth * 0.4f, screenHeight * 0.5f, screenWidth, screenHeight * 0.55f))
+                walls.add(Rect(screenWidth * 0.2f, screenHeight * 0.75f, screenWidth * 0.8f, screenHeight * 0.8f))
+                goal = Rect(screenWidth * 0.5f - 65f, screenHeight - 180f, screenWidth * 0.5f + 65f, screenHeight - 50f)
+            }
+            3 -> {
+                // Nivel 3: Difícil
+                walls.add(Rect(screenWidth * 0.3f, 0f, screenWidth * 0.35f, screenHeight * 0.8f))
+                walls.add(Rect(screenWidth * 0.65f, screenHeight * 0.2f, screenWidth * 0.7f, screenHeight))
+                walls.add(Rect(0f, screenHeight * 0.5f, screenWidth * 0.3f, screenHeight * 0.55f))
+                goal = Rect(screenWidth - 180f, 50f, screenWidth - 50f, 180f) // Meta arriba derecha
+            }
+            else -> {
+                // Fin del juego o niveles extra
+                _uiState.update { it.copy(isGameOver = true) }
+                return
+            }
+        }
 
         _uiState.update {
             it.copy(
-                ballPosition = Pair(100f, 100f), // Posición inicial (arriba izquierda)
+                ballPosition = startPos,
                 walls = walls,
                 goal = goal,
-                hasWon = false
+                hasWon = false,
+                currentLevel = level,
+                timeElapsed = 0L
             )
         }
+        
+        startTimer()
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+        startTime = System.currentTimeMillis()
+        timerJob = viewModelScope.launch {
+            while (true) {
+                delay(100) // Actualizar cada 100ms
+                val elapsed = System.currentTimeMillis() - startTime
+                _uiState.update { it.copy(timeElapsed = elapsed) }
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        timerJob?.cancel()
+    }
+
+    fun nextLevel() {
+        val next = _uiState.value.currentLevel + 1
+        loadLevel(next)
     }
 
     // Esta función se llama ~60 veces por segundo desde el sensor
@@ -87,6 +145,10 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
             // Chequear si tocamos la meta
             val currentBallRect = Rect(finalX - state.ballRadius, finalY - state.ballRadius, finalX + state.ballRadius, finalY + state.ballRadius)
             val won = state.goal.overlaps(currentBallRect)
+
+            if (won) {
+                stopTimer()
+            }
 
             state.copy(
                 ballPosition = Pair(finalX, finalY),

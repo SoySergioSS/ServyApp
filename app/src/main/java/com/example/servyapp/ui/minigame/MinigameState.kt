@@ -10,5 +10,9 @@ data class MazeGameState(
     val walls: List<Rect> = emptyList(),
     // Rectángulo de la meta
     val goal: Rect = Rect.Zero,
-    val hasWon: Boolean = false
+    val hasWon: Boolean = false,
+    // Nuevo estado
+    val currentLevel: Int = 1,
+    val timeElapsed: Long = 0L, // En milisegundos
+    val isGameOver: Boolean = false
 )
