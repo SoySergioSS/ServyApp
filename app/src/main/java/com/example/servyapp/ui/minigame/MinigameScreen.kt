@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.DisposableEffect
 
 
 @Composable
@@ -111,7 +110,16 @@ fun MazeGameScreen(
                         )
                     }
 
-                    // 3. Dibujar la Bola (Círculo Rojo)
+                    // 3. Dibujar Trampas (Rojo semitransparente)
+                    state.traps.forEach { rect ->
+                        drawRect(
+                            color = Color(0x80FF0000),
+                            topLeft = Offset(rect.left, rect.top),
+                            size = Size(rect.width, rect.height)
+                        )
+                    }
+
+                    // 4. Dibujar la Bola (Círculo Rojo)
                     drawCircle(
                         color = Color(0xFFF44336),
                         radius = state.ballRadius,

@@ -38,6 +38,7 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
     private fun loadLevel(level: Int) {
         val wallThickness = 25f
         val walls = mutableListOf<Rect>()
+        val traps = mutableListOf<Rect>()
         var goal = Rect.Zero
         var startPos = Pair(100f, 100f)
 
@@ -66,11 +67,35 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
                 // Nivel 3: Difícil
                 walls.add(Rect(screenWidth * 0.3f, 0f, screenWidth * 0.35f, screenHeight * 0.8f))
                 walls.add(Rect(screenWidth * 0.65f, screenHeight * 0.2f, screenWidth * 0.7f, screenHeight))
-                walls.add(Rect(0f, screenHeight * 0.5f, screenWidth * 0.3f, screenHeight * 0.55f))
-                goal = Rect(screenWidth - 180f, 50f, screenWidth - 50f, 180f) // Meta arriba derecha
+                // Pared que no bloquea el inicio
+                walls.add(Rect(screenWidth * 0.15f, screenHeight * 0.6f, screenWidth * 0.3f, screenHeight * 0.65f)) 
+                goal = Rect(screenWidth - 180f, 50f, screenWidth - 50f, 180f) 
+            }
+            4 -> {
+                // Nivel 4: Con Trampas
+                walls.add(Rect(screenWidth * 0.4f, 0f, screenWidth * 0.45f, screenHeight * 0.7f))
+                walls.add(Rect(screenWidth * 0.7f, screenHeight * 0.3f, screenWidth * 0.75f, screenHeight))
+                
+                // Trampas (Zonas rojas)
+                traps.add(Rect(screenWidth * 0.1f, screenHeight * 0.4f, screenWidth * 0.3f, screenHeight * 0.5f))
+                traps.add(Rect(screenWidth * 0.5f, screenHeight * 0.1f, screenWidth * 0.6f, screenHeight * 0.2f))
+                
+                goal = Rect(screenWidth - 150f, screenHeight - 150f, screenWidth - 50f, screenHeight - 50f)
+            }
+            5 -> {
+                // Nivel 5: Laberinto Mortal
+                walls.add(Rect(0f, screenHeight * 0.2f, screenWidth * 0.8f, screenHeight * 0.25f))
+                walls.add(Rect(screenWidth * 0.2f, screenHeight * 0.5f, screenWidth, screenHeight * 0.55f))
+                walls.add(Rect(0f, screenHeight * 0.8f, screenWidth * 0.8f, screenHeight * 0.85f))
+                
+                // Muchas trampas
+                traps.add(Rect(screenWidth * 0.85f, screenHeight * 0.25f, screenWidth * 0.95f, screenHeight * 0.45f))
+                traps.add(Rect(screenWidth * 0.05f, screenHeight * 0.55f, screenWidth * 0.15f, screenHeight * 0.75f))
+                
+                goal = Rect(screenWidth * 0.5f - 50f, screenHeight - 150f, screenWidth * 0.5f + 50f, screenHeight - 50f)
             }
             else -> {
-                // Fin del juego o niveles extra
+                // Fin del juego
                 _uiState.update { it.copy(isGameOver = true) }
                 return
             }
@@ -83,7 +108,8 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
                 goal = goal,
                 hasWon = false,
                 currentLevel = level,
-                timeElapsed = 0L
+                timeElapsed = 0L,
+                traps = traps
             )
         }
         
@@ -142,8 +168,14 @@ class MazeGameViewModel @Inject constructor() : ViewModel() {
                 finalY = nextY
             }
 
-            // Chequear si tocamos la meta
+            // Chequear trampas
             val currentBallRect = Rect(finalX - state.ballRadius, finalY - state.ballRadius, finalX + state.ballRadius, finalY + state.ballRadius)
+            if (state.traps.any { it.overlaps(currentBallRect) }) {
+                // Reiniciar nivel si toca trampa
+                return@update state.copy(ballPosition = Pair(100f, 100f))
+            }
+
+            // Chequear si tocamos la meta
             val won = state.goal.overlaps(currentBallRect)
 
             if (won) {

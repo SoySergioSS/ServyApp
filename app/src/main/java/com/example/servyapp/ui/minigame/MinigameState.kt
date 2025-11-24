@@ -14,5 +14,6 @@ data class MazeGameState(
     // Nuevo estado
     val currentLevel: Int = 1,
     val timeElapsed: Long = 0L, // En milisegundos
-    val isGameOver: Boolean = false
+    val isGameOver: Boolean = false,
+    val traps: List<Rect> = emptyList() // Nuevas trampas
 )
