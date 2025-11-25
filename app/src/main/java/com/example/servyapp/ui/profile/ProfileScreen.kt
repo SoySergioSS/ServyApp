@@ -33,7 +33,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,13 +58,6 @@ fun ProfileScreen(
     logoutButtonPressed: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-
-    // Mostrar mensaje de éxito
-    LaunchedEffect(state.updateSuccess) {
-        if (state.updateSuccess) {
-            // El diálogo se cierra automáticamente, pero podrías mostrar un snackbar aquí
-        }
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),

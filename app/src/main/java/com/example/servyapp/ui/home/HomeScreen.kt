@@ -1,8 +1,6 @@
 package com.example.servyapp.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,10 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,11 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.servyapp.R
 import com.example.servyapp.domain.model.Restaurant
 import com.example.servyapp.ui.theme.ServyAppTheme
 import com.example.servyapp.ui.utils.AppLoading
@@ -49,7 +47,6 @@ import com.example.servyapp.ui.utils.AppLoading
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel,
-    onProfileClick: () -> Unit,
     onChatbotClick: () -> Unit,
     onMapClick: () -> Unit
 ) {
@@ -58,7 +55,6 @@ fun HomeScreen(
     // Llama al Composable de UI (Contenido)
     HomeScreenContent(
         state = state,
-        onProfileClick = onProfileClick,
         onRestaurantClick = { restaurantId ->
             homeViewModel.saveSelectedRestaurant(restaurantId)
         },
@@ -77,7 +73,6 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     state: HomeState,
-    onProfileClick: () -> Unit,
     onRestaurantClick: (String) -> Unit,
     onChatbotClick: () -> Unit,
     onMapClick: () -> Unit,
@@ -105,7 +100,6 @@ fun HomeScreenContent(
             )
         },
 
-        // 3. AÑADIMOS EL BOTÓN FLOTANTE AQUÍ
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onChatbotClick,
@@ -113,7 +107,7 @@ fun HomeScreenContent(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
                 Icon(
-                    imageVector = Icons.Default.Chat,
+                    imageVector = Icons.AutoMirrored.Filled.Chat,
                     contentDescription = "Asistente Nutricional"
                 )
             }
@@ -240,7 +234,6 @@ fun HomeScreenContentPreview_WithData() {
     ServyAppTheme {
         HomeScreenContent(
             state = HomeState(isLoading = false, restaurants = previewRestaurants),
-            onProfileClick = {},
             onRestaurantClick = {},
             onChatbotClick = {},
             onMapClick = {}
@@ -254,7 +247,6 @@ fun HomeScreenContentPreview_Loading() {
     ServyAppTheme {
         HomeScreenContent(
             state = HomeState(isLoading = true),
-            onProfileClick = {},
             onRestaurantClick = {},
             onChatbotClick = {},
             onMapClick = {}
@@ -268,7 +260,6 @@ fun HomeScreenContentPreview_Error() {
     ServyAppTheme {
         HomeScreenContent(
             state = HomeState(isLoading = false, errorMessage = "No se pudo conectar al servidor."),
-            onProfileClick = {},
             onRestaurantClick = {},
             onChatbotClick = {},
             onMapClick = {}
@@ -282,7 +273,6 @@ fun HomeScreenContentPreview_Empty() {
     ServyAppTheme {
         HomeScreenContent(
             state = HomeState(isLoading = false, restaurants = emptyList()),
-            onProfileClick = {},
             onRestaurantClick = {},
             onChatbotClick = {},
             onMapClick = {}

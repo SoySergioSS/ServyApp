@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
@@ -155,7 +156,7 @@ fun OrderDetailScreen(
                 title = { Text("Detalle de la orden") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -231,7 +232,6 @@ fun OrderDetailScreen(
                 )
                 if (showSeatSheet) {
                     SeatSelectionBottomSheet(
-                        requiredSeats = requiredSeats,
                         onSeatsChange = { requiredSeats = it },
                         onConfirm = {
                             showSeatSheet = false
@@ -471,7 +471,7 @@ fun OrderDetailScreenContent(
                 title = { Text("Detalle de la orden") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -538,7 +538,6 @@ fun OrderDetailScreenContent(
 @Composable
 fun SeatSelectionBottomSheet(
     initialSeats: Int = 1,
-    requiredSeats: Int,
     onSeatsChange: (Int) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
