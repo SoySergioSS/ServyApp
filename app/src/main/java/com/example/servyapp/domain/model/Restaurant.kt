@@ -6,5 +6,8 @@ data class Restaurant (
     val address: String = "",
     val phone: String = "",
     val imageURL: String = "",
-    val rating: Double = 0.0
+    val rating: Double = 0.0,
+
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
 )

@@ -33,8 +33,10 @@ android {
         }
 
         val geminiApiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
-
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+
+        val mapsApiKey = properties.getProperty("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -124,4 +126,9 @@ dependencies {
 
     // Librería para renderizar Markdown
     implementation("com.github.jeziellago:compose-markdown:0.5.0")
+
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+
 }
