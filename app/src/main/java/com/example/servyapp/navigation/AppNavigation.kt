@@ -69,6 +69,7 @@ sealed class Screen(val route: String) {
     object Stats : Screen("stats")
     object Chatbot : Screen("chatbot")
     object Minigame : Screen("minigame")
+    object Map : Screen("map")
 }
 
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -184,6 +185,9 @@ fun AppNavigation(
                     },
                     onChatbotClick = {
                         navHostController.navigate(Screen.Chatbot.route)
+                    },
+                    onMapClick = {
+                        navHostController.navigate(Screen.Map.route)
                     }
                 )
             }
@@ -305,6 +309,17 @@ fun AppNavigation(
                     onNavigateBack = {
                         navHostController.popBackStack()
                     }
+                )
+            }
+
+            composable(route = Screen.Map.route) {
+                // Obtenemos el ViewModel del Home para reutilizar la lista de restaurantes ya cargada
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val state by homeViewModel.uiState.collectAsState()
+
+                com.example.servyapp.ui.maps.MapScreen(
+                    restaurants = state.restaurants,
+                    onBackClick = { navHostController.popBackStack() }
                 )
             }
 

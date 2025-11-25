@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,7 +50,8 @@ import com.example.servyapp.ui.utils.AppLoading
 fun HomeScreen(
     homeViewModel: HomeViewModel,
     onProfileClick: () -> Unit,
-    onChatbotClick: () -> Unit
+    onChatbotClick: () -> Unit,
+    onMapClick: () -> Unit
 ) {
     val state by homeViewModel.uiState.collectAsState()
 
@@ -60,7 +62,8 @@ fun HomeScreen(
         onRestaurantClick = { restaurantId ->
             homeViewModel.saveSelectedRestaurant(restaurantId)
         },
-        onChatbotClick = onChatbotClick
+        onChatbotClick = onChatbotClick,
+        onMapClick = onMapClick
     )
 }
 
@@ -77,6 +80,7 @@ fun HomeScreenContent(
     onProfileClick: () -> Unit,
     onRestaurantClick: (String) -> Unit,
     onChatbotClick: () -> Unit,
+    onMapClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 1. Usamos Scaffold como el contenedor raíz
@@ -88,6 +92,15 @@ fun HomeScreenContent(
             TopAppBar(
                 title = {
                     Text("Restaurantes")
+                },
+                actions = {
+                    // Botón para ir al Mapa
+                    IconButton(onClick = onMapClick) {
+                        Icon(
+                            imageVector = Icons.Default.Place, // O Icons.Default.Map
+                            contentDescription = "Ver Mapa"
+                        )
+                    }
                 }
             )
         },
@@ -229,7 +242,8 @@ fun HomeScreenContentPreview_WithData() {
             state = HomeState(isLoading = false, restaurants = previewRestaurants),
             onProfileClick = {},
             onRestaurantClick = {},
-            onChatbotClick = {}
+            onChatbotClick = {},
+            onMapClick = {}
         )
     }
 }
@@ -242,7 +256,8 @@ fun HomeScreenContentPreview_Loading() {
             state = HomeState(isLoading = true),
             onProfileClick = {},
             onRestaurantClick = {},
-            onChatbotClick = {}
+            onChatbotClick = {},
+            onMapClick = {}
         )
     }
 }
@@ -255,7 +270,8 @@ fun HomeScreenContentPreview_Error() {
             state = HomeState(isLoading = false, errorMessage = "No se pudo conectar al servidor."),
             onProfileClick = {},
             onRestaurantClick = {},
-            onChatbotClick = {}
+            onChatbotClick = {},
+            onMapClick = {}
         )
     }
 }
@@ -268,7 +284,8 @@ fun HomeScreenContentPreview_Empty() {
             state = HomeState(isLoading = false, restaurants = emptyList()),
             onProfileClick = {},
             onRestaurantClick = {},
-            onChatbotClick = {}
+            onChatbotClick = {},
+            onMapClick = {}
         )
     }
 }
