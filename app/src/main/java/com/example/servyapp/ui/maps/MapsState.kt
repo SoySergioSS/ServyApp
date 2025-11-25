@@ -1,4 +1,8 @@
 package com.example.servyapp.ui.maps
 
-class MapsState {
-}
+import com.google.android.gms.maps.model.LatLng
+
+data class MapState(
+    val userLocation: LatLng? = null,
+    val isLocationPermissionGranted: Boolean = false
+)

@@ -3,7 +3,6 @@ package com.example.servyapp.ui.maps
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,13 +17,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.servyapp.R
 import com.example.servyapp.domain.model.Restaurant
-import com.google.android.gms.location.LocationServices // NUEVO IMPORT
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -43,76 +49,57 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @Composable
 fun MapScreen(
     restaurants: List<Restaurant>,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onRestaurantClick: (String) -> Unit,
+    // Inyectamos el ViewModel aquí
+    viewModel: MapViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val state by viewModel.uiState.collectAsState() // Observamos el estado
 
-    // 1. Estado para el Permiso
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-
-    // NUEVO: Estado para guardar TU ubicación
-    var userLocation by remember { mutableStateOf<LatLng?>(null) }
-
-    // 2. Lanzador de Permisos
+    // 1. Launcher de Permisos
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted -> hasLocationPermission = isGranted }
+        onResult = { isGranted ->
+            // Avisamos al ViewModel del resultado
+            viewModel.updatePermissionStatus(isGranted)
+        }
     )
 
-    // 3. Inicialización y Obtención de Ubicación
+    // 2. Efecto Inicial (Permisos + Inicialización Gráfica)
     LaunchedEffect(Unit) {
-        if (!hasLocationPermission) {
+        // Revisamos permiso inicial
+        val isGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        viewModel.updatePermissionStatus(isGranted)
+
+        if (!isGranted) {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+
+        // Inicialización de Google Maps (Esto DEBE estar en la UI)
         try {
             MapsInitializer.initialize(context)
-            // NUEVO: Si hay permiso, pedimos la ubicación al sistema
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                val locationClient = LocationServices.getFusedLocationProviderClient(context)
-                locationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        userLocation = LatLng(location.latitude, location.longitude)
-                    }
-                }
-            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    // NUEVO: Efecto secundario para cuando nos dan el permiso después de iniciar
-    LaunchedEffect(hasLocationPermission) {
-        if (hasLocationPermission) {
-            try {
-                val locationClient = LocationServices.getFusedLocationProviderClient(context)
-                locationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        userLocation = LatLng(location.latitude, location.longitude)
-                    }
-                }
-            } catch (e: SecurityException) { /* Ignorar */ }
-        }
-    }
-
-    // 4. Icono Personalizado
+    // 3. Carga del Icono (Esto es UI pura, se queda aquí)
     var restaurantIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
     LaunchedEffect(Unit) {
         restaurantIcon = bitmapDescriptorFromVector(context, R.drawable.ic_restaurant)
     }
 
-    // 5. Configuración del Mapa
-    val properties by remember(hasLocationPermission) {
-        mutableStateOf(MapProperties(isMyLocationEnabled = hasLocationPermission))
+    // 4. Configuración del Mapa (Reactiva al estado)
+    val properties = remember(state.isLocationPermissionGranted) {
+        MapProperties(isMyLocationEnabled = state.isLocationPermissionGranted)
     }
-    val uiSettings by remember {
-        mutableStateOf(MapUiSettings(myLocationButtonEnabled = true))
+    val uiSettings = remember {
+        MapUiSettings(myLocationButtonEnabled = true)
     }
 
     val defaultLocation = LatLng(-12.0464, -77.0428)
@@ -120,13 +107,11 @@ fun MapScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 13f)
     }
 
-    // --- LÓGICA DE ZOOM ACTUALIZADA ---
-    // Se ejecuta cuando cambian los restaurantes O cuando obtenemos tu ubicación
-    LaunchedEffect(restaurants, userLocation) {
+    // 5. Lógica de Zoom (Reactiva al estado userLocation)
+    LaunchedEffect(restaurants, state.userLocation) {
         val builder = LatLngBounds.builder()
         var hasPoints = false
 
-        // A. Añadir Restaurantes
         restaurants.forEach {
             if (it.latitude != 0.0 && it.longitude != 0.0) {
                 builder.include(LatLng(it.latitude, it.longitude))
@@ -134,24 +119,20 @@ fun MapScreen(
             }
         }
 
-        // B. NUEVO: Añadir al Usuario (si tenemos su ubicación)
-        if (userLocation != null) {
-            builder.include(userLocation!!)
+        // Usamos la ubicación que viene del ViewModel
+        if (state.userLocation != null) {
+            builder.include(state.userLocation!!)
             hasPoints = true
         }
 
         if (hasPoints) {
             try {
-                // Ajustamos el zoom para que quepa todo
                 cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngBounds(builder.build(), 150) // 150px de margen
+                    CameraUpdateFactory.newLatLngBounds(builder.build(), 150)
                 )
-            } catch (e: Exception) {
-                // El mapa puede no estar listo aún en el primer frame
-            }
+            } catch (e: Exception) { }
         }
     }
-    // ------------------------------------
 
     Scaffold(
         topBar = {
@@ -178,7 +159,11 @@ fun MapScreen(
                             state = MarkerState(position = LatLng(restaurant.latitude, restaurant.longitude)),
                             title = restaurant.name,
                             snippet = restaurant.address,
-                            icon = restaurantIcon
+                            icon = restaurantIcon,
+                            onClick = {
+                                onRestaurantClick(restaurant.id)
+                                true
+                            }
                         )
                     }
                 }
@@ -187,18 +172,12 @@ fun MapScreen(
     }
 }
 
-// Función auxiliar
-fun bitmapDescriptorFromVector(
-    context: Context,
-    vectorResId: Int
-): BitmapDescriptor? {
+// (La función auxiliar bitmapDescriptorFromVector se mantiene igual al final)
+fun bitmapDescriptorFromVector(context: Context, vectorResId: Int): BitmapDescriptor? {
+    // ... (mismo código de antes)
     val vectorDrawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
     vectorDrawable.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
-    val bitmap = Bitmap.createBitmap(
-        vectorDrawable.intrinsicWidth,
-        vectorDrawable.intrinsicHeight,
-        Bitmap.Config.ARGB_8888
-    )
+    val bitmap = createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
     val canvas = Canvas(bitmap)
     vectorDrawable.draw(canvas)
     return BitmapDescriptorFactory.fromBitmap(bitmap)

@@ -313,13 +313,28 @@ fun AppNavigation(
             }
 
             composable(route = Screen.Map.route) {
-                // Obtenemos el ViewModel del Home para reutilizar la lista de restaurantes ya cargada
+                // 1. Obtenemos el ViewModel (tendrá su propia instancia para esta pantalla)
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val state by homeViewModel.uiState.collectAsState()
 
+                // 2. IMPORTANTE: Escuchamos el evento de navegación AQUÍ TAMBIÉN
+                // Si el ViewModel dice "ve a los platos", obedecemos.
+                LaunchedEffect(state.navigateToDishes) {
+                    if (state.navigateToDishes) {
+                        navHostController.navigate(Screen.Dishes.route)
+                        homeViewModel.navigationToDishesComplete()
+                    }
+                }
+
+                // 3. Pasamos la lista y la acción de clic
                 com.example.servyapp.ui.maps.MapScreen(
                     restaurants = state.restaurants,
-                    onBackClick = { navHostController.popBackStack() }
+                    onBackClick = { navHostController.popBackStack() },
+                    onRestaurantClick = { restaurantId ->
+                        // Al hacer clic en el mapa, guardamos el ID en el SessionManager
+                        // Esto disparará el LaunchedEffect de arriba automáticamente
+                        homeViewModel.saveSelectedRestaurant(restaurantId)
+                    }
                 )
             }
 
