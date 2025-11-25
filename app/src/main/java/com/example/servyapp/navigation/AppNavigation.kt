@@ -180,9 +180,6 @@ fun AppNavigation(
 
                 HomeScreen(
                     homeViewModel = hiltViewModel(),
-                    onProfileClick = {
-                        navHostController.navigate(Screen.Profile.route)
-                    },
                     onChatbotClick = {
                         navHostController.navigate(Screen.Chatbot.route)
                     },
