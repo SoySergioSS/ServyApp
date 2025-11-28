@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.servyapp.domain.model.VisualItem
@@ -44,7 +45,7 @@ import com.example.servyapp.ui.waiter.WaiterViewModel
 fun VoiceAssistantScreen(
     onBackClick: () -> Unit
 ) {
-    val viewModel: WaiterViewModel = viewModel()
+    val viewModel: WaiterViewModel = hiltViewModel()
     val context = LocalContext.current
 
     // --- Estados del ViewModel ---
@@ -53,6 +54,17 @@ fun VoiceAssistantScreen(
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
     val currentPhase = viewModel.currentPhase
+    val snackbarMessage = viewModel.snackbarMessage
+    val localCartItems by viewModel.cartItems.collectAsState(initial = emptyList())
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSnackbarMessage() // Limpiamos para que no se repita
+        }
+    }
 
     // --- Lógica de Audio (TTS / STT) ---
     val ttsEngine = rememberTextToSpeech(context)
@@ -176,10 +188,28 @@ fun VoiceAssistantScreen(
                 when (currentPhase) {
                     "summary" -> {
                         // MOSTRAR VISTA DE RESUMEN DE PEDIDO
+                        val summaryVisuals = localCartItems.map { cartItem ->
+                            VisualItem(
+                                id = cartItem.id,
+                                title = cartItem.dish.name,
+                                // Mostramos cantidad y precio total de ese ítem
+                                subtitle = "${cartItem.quantity} un. • Total: S/ ${String.format("%.2f", cartItem.totalPrice)}",
+                                imageSeed = cartItem.dish.imageURL, // Usamos la imagen real
+                                type = "cart_item"
+                            )
+                        }
+
                         OrderSummaryView(
-                            items = visualItems,
+                            items = summaryVisuals, // 👈 Usamos la lista local convertida
                             modifier = Modifier.weight(1f)
                         )
+
+                        // Opcional: Si el carrito está vacío, mostrar mensaje
+                        if (localCartItems.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                                Text("Tu carrito está vacío. ¡Pide algo rico!")
+                            }
+                        }
                     }
                     else -> {
                         // MOSTRAR VISTA DE GRILLA (Restaurantes / Platos)
@@ -380,8 +410,13 @@ fun OrderItemRow(item: VisualItem) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Asumimos que el backend envía la imagen pequeña o un icono genérico
+            val modelUrl = if (item.imageSeed.startsWith("http")){
+                item.imageSeed
+            } else {
+                "https://picsum.photos/seed/${item.imageSeed}/100/100"
+            }
             AsyncImage(
-                model = "https://picsum.photos/seed/${item.imageSeed}/100/100",
+                model = modelUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .size(50.dp)
