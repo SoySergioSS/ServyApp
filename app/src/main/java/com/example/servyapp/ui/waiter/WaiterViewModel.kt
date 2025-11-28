@@ -21,10 +21,14 @@ import com.example.servyapp.domain.model.PedidoItem
 import com.example.servyapp.domain.model.PedidoStatus
 import com.example.servyapp.domain.model.VisualItem
 import com.example.servyapp.network.ApiClient
+import com.example.servyapp.ui.cart.CartState
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -39,6 +43,9 @@ class WaiterViewModel @Inject constructor(
     // ... (El resto de tus estados: _history, visualItems, etc. se mantienen igual) ...
     private val _history = mutableStateListOf<HistoryItem>()
     val history: List<HistoryItem> get() = _history
+
+    private val _uiState = MutableStateFlow(WaiterState())
+    val uiState: StateFlow<WaiterState> = _uiState
 
     val cartItems = cartManager.cartItems // <--- 2. Accedemos a los ítems del carrito
 
@@ -66,6 +73,23 @@ class WaiterViewModel @Inject constructor(
 
     fun onMessageChange(newValue: String) {
         userMessage = newValue
+    }
+    // 3. Función que se llamará desde el botón de la UI
+    fun onNavigateToOrdersClick() {
+        _uiState.update {
+            it.copy(
+                navigationEvent = WaiterNavigationEvent.NavigateToOrders
+            )
+        }
+    }
+
+    // 4. Función para limpiar el evento una vez consumido
+    fun onNavigationEventHandled() {
+        _uiState.update {
+            it.copy(
+                navigationEvent = null
+            )
+        }
     }
 
     fun clearSnackbarMessage() {

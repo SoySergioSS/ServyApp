@@ -1,4 +1,12 @@
 package com.example.servyapp.ui.waiter
 
-class WaiterState {
+data class WaiterState(
+    val isLoading : Boolean = false,
+    val navigationEvent: WaiterNavigationEvent? = null
+) {
+
+}
+
+sealed class WaiterNavigationEvent {
+    object NavigateToOrders : WaiterNavigationEvent()
 }

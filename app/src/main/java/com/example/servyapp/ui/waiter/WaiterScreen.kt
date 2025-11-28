@@ -36,18 +36,33 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.servyapp.domain.model.VisualItem
+import com.example.servyapp.ui.waiter.WaiterNavigationEvent
 import com.example.servyapp.ui.components.*
 import com.example.servyapp.ui.theme.ServyAppTheme
+import com.example.servyapp.ui.waiter.WaiterState
 import com.example.servyapp.ui.waiter.WaiterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoiceAssistantScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToOrders: () -> Unit,
 ) {
     val viewModel: WaiterViewModel = hiltViewModel()
     val context = LocalContext.current
 
+    val state by viewModel.uiState.collectAsState()
+
+    // 1. ESCUCHAR EL EVENTO DE NAVEGACIÓN (Igual que en CartScreen)
+    LaunchedEffect(state.navigationEvent) {
+        when (state.navigationEvent) {
+            is WaiterNavigationEvent.NavigateToOrders -> {
+                onNavigateToOrders()
+                viewModel.onNavigationEventHandled()
+            }
+            null -> { }
+        }
+    }
     // --- Estados del ViewModel ---
     val aiMessage = viewModel.aiMessage
     val visualItems = viewModel.visualItems
@@ -201,6 +216,7 @@ fun VoiceAssistantScreen(
 
                         OrderSummaryView(
                             items = summaryVisuals, // 👈 Usamos la lista local convertida
+                            onActionClick = { viewModel.onNavigateToOrdersClick()},
                             modifier = Modifier.weight(1f)
                         )
 
@@ -347,6 +363,7 @@ fun VisualItemCard(item: VisualItem, onClick: () -> Unit) {
 @Composable
 fun OrderSummaryView(
     items: List<VisualItem>,
+    onActionClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -386,7 +403,7 @@ fun OrderSummaryView(
 
         // Botón visual de "Listo" (Aunque la IA ya lo confirma verbalmente)
         Button(
-            onClick = { /* Acción opcional, ej: ir a QR */ },
+            onClick = onActionClick,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
@@ -446,6 +463,7 @@ fun OrderItemRow(item: VisualItem) {
 @Composable
 fun VoiceAssistantScreenPreview() {
     ServyAppTheme {
-        VoiceAssistantScreen(onBackClick = { Unit })
+        VoiceAssistantScreen(onBackClick = { Unit },
+            onNavigateToOrders = { Unit })
     }
 }
