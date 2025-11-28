@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,6 +25,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val properties = Properties()
+        val localPropertiesFile = project.rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.inputStream())
+        }
+
+        val geminiApiKey = properties.getProperty("GEMINI_API_KEY") ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+
+        val mapsApiKey = properties.getProperty("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -43,6 +57,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -75,9 +90,11 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // Room Database
-    // implementation(libs.androidx.room.ktx) // Ya está o se puede agregar
+    // implementation(libs.androidx.room.ktx) // Ya está
     implementation("androidx.room:room-runtime:2.8.0")
     ksp("androidx.room:room-compiler:2.8.0")
+    // Gson para convertir objetos a JSON en Room
+    implementation("com.google.code.gson:gson:2.10.1")
 
     //hilt
     implementation(libs.dagger.hilt)
@@ -108,4 +125,15 @@ dependencies {
 
     //Pie Charts
     implementation("co.yml:ycharts:2.1.0")
+
+    // SDK de Google AI para Android (Gemini)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Librería para renderizar Markdown
+    implementation("com.github.jeziellago:compose-markdown:0.5.0")
+
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+
 }

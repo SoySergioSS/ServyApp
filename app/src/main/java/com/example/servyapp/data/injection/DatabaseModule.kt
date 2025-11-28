@@ -21,8 +21,10 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             CartDatabase::class.java,
-            "servyapp_cart_db" // Nombre de la base de datos
-        ).build()
+            "cart_database"
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

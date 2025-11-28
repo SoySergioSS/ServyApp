@@ -1,15 +1,13 @@
 package com.example.servyapp.navigation
 
 import VoiceAssistantScreen
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -21,17 +19,19 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.servyapp.ui.cart.CartScreen
 import com.example.servyapp.ui.cart.CartViewModel
+import com.example.servyapp.ui.chatbot.ChatbotScreen
 import com.example.servyapp.ui.components.BottomNavigationBar
+import com.example.servyapp.ui.dishdetail.DishDetailScreen
+import com.example.servyapp.ui.dishdetail.DishDetailViewModel
 import com.example.servyapp.ui.dishes.DishesScreen
 import com.example.servyapp.ui.home.HomeScreen
 import com.example.servyapp.ui.home.HomeViewModel
 import com.example.servyapp.ui.login.LoginScreen
 import com.example.servyapp.ui.login.LoginViewModel
-import com.example.servyapp.ui.orders.OrdersScreen
-import com.example.servyapp.ui.dishdetail.DishDetailViewModel
-import com.example.servyapp.ui.dishdetail.DishDetailScreen
+import com.example.servyapp.ui.minigame.MazeGameScreen
 import com.example.servyapp.ui.orderdetail.OrderDetailScreen
 import com.example.servyapp.ui.orderdetail.OrderDetailViewModel
+import com.example.servyapp.ui.orders.OrdersScreen
 import com.example.servyapp.ui.profile.ProfileScreen
 import com.example.servyapp.ui.profile.ProfileViewModel
 import com.example.servyapp.ui.signup.CardRegistrationScreen
@@ -67,8 +67,12 @@ sealed class Screen(val route: String) {
 
     object VirtualWaiter : Screen("virtual_waiter")
     object Stats : Screen("stats")
+    object Chatbot : Screen("chatbot")
+    object Minigame : Screen("minigame")
+    object Map : Screen("map")
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun AppNavigation(
     navHostController: NavHostController
@@ -175,9 +179,14 @@ fun AppNavigation(
                 }
 
                 HomeScreen(
-                    homeViewModel = hiltViewModel(), onProfileClick = {
-                        navHostController.navigate(Screen.Profile.route)
-                    })
+                    homeViewModel = hiltViewModel(),
+                    onChatbotClick = {
+                        navHostController.navigate(Screen.Chatbot.route)
+                    },
+                    onMapClick = {
+                        navHostController.navigate(Screen.Map.route)
+                    }
+                )
             }
 
             composable(route = Screen.Card.route) {
@@ -219,13 +228,6 @@ fun AppNavigation(
                     navArgument("restaurantId") { type = NavType.StringType },
                     navArgument("dishId") { type = NavType.StringType })) {
                 val dishDetailViewModel: DishDetailViewModel = hiltViewModel()
-                val state by dishDetailViewModel.uiState.collectAsState()
-//            LaunchedEffect(state.navigateToCart) {
-//                if(state.navigateToCart){
-//                    navHostController.navigate(Screen.Cart.route)
-//                    dishDetailViewModel.navigationToCartComplete()
-//                }
-//            }
                 DishDetailScreen(viewModel = dishDetailViewModel, onBackClick = {
                     navHostController.popBackStack()
                 }, onCartClick = {
@@ -278,7 +280,9 @@ fun AppNavigation(
                     onBackClick = { navHostController.popBackStack() },
                     onNavigateToCard = {
                         navHostController.navigate(Screen.Card.route)
-                    })
+                    },
+                    onNavigateToMinigame = { navHostController.navigate(Screen.Minigame.route) }
+                )
             }
 
             composable(route = Screen.VirtualWaiter.route) {
@@ -297,7 +301,45 @@ fun AppNavigation(
             }
 
             composable(route = Screen.Stats.route) {
-                StatsScreen()
+                StatsScreen(viewModel = hiltViewModel())
+            }
+
+            composable(route = Screen.Chatbot.route) {
+                ChatbotScreen()
+            }
+
+            composable(route = Screen.Minigame.route) {
+                MazeGameScreen(
+                    onNavigateBack = {
+                        navHostController.popBackStack()
+                    }
+                )
+            }
+
+            composable(route = Screen.Map.route) {
+                // 1. Obtenemos el ViewModel (tendrá su propia instancia para esta pantalla)
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val state by homeViewModel.uiState.collectAsState()
+
+                // 2. IMPORTANTE: Escuchamos el evento de navegación AQUÍ TAMBIÉN
+                // Si el ViewModel dice "ve a los platos", obedecemos.
+                LaunchedEffect(state.navigateToDishes) {
+                    if (state.navigateToDishes) {
+                        navHostController.navigate(Screen.Dishes.route)
+                        homeViewModel.navigationToDishesComplete()
+                    }
+                }
+
+                // 3. Pasamos la lista y la acción de clic
+                com.example.servyapp.ui.maps.MapScreen(
+                    restaurants = state.restaurants,
+                    onBackClick = { navHostController.popBackStack() },
+                    onRestaurantClick = { restaurantId ->
+                        // Al hacer clic en el mapa, guardamos el ID en el SessionManager
+                        // Esto disparará el LaunchedEffect de arriba automáticamente
+                        homeViewModel.saveSelectedRestaurant(restaurantId)
+                    }
+                )
             }
 
         }
