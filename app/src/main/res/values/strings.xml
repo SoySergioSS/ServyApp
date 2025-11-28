@@ -4,4 +4,6 @@
     <string name="bienvenido_a_servyapp">Bienvenido a ServyApp</string>
     <string name="iniciar_sesi_n">Iniciar Sesión</string>
     <string name="registrarse">Registrarse</string>
+    <string name="ir_a_mi_orden_escanear_qr">Ir a Mi Orden / Escanear QR</string>
+    <string name="presiona_el_micr_fono_y_pide_lo_que_se_te_antoje">Presiona el micrófono y pide lo que se te antoje.</string>
 </resources>
