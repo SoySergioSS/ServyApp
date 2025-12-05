@@ -288,7 +288,14 @@ fun AppNavigation(
             composable(route = Screen.VirtualWaiter.route) {
                 VoiceAssistantScreen(
                     onBackClick = {
-                    navHostController.popBackStack()
+                        navHostController.popBackStack()
+                    },
+                    onNavigateToOrders = {
+                        // Navegar a la pantalla de órdenes
+                        navHostController.navigate(Screen.Orders.route) {
+                            // Opcional: Si quieres evitar volver al mesero con "atrás", puedes limpiar el stack
+                            popUpTo(Screen.Home.route)
+                        }
                     }
                 )
             }
